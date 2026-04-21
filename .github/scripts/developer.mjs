@@ -148,6 +148,23 @@ async function toolSubmitPr(commitMessage) {
 
   // Stage all changes
   execFileSync("git", ["add", "-A"]);
+
+  // Unstage forbidden files (build artifacts, secrets, etc.)
+  const FORBIDDEN_PATTERNS = [
+    "node_modules/", "dist/", "build/", ".next/", ".nuxt/", ".svelte-kit/",
+    "out/", "coverage/", ".cache/", ".turbo/", ".vercel/",
+    ".env", ".env.local", ".env.production",
+    "package-lock.json", ".DS_Store",
+  ];
+  const stagedFiles = execFileSync("git", ["diff", "--cached", "--name-only"], { encoding: "utf-8" }).trim();
+  const forbidden = stagedFiles.split("\n").filter((f) => FORBIDDEN_PATTERNS.some((p) => f.startsWith(p) || f === p));
+  for (const f of forbidden) {
+    try { execFileSync("git", ["reset", "HEAD", f], { encoding: "utf-8" }); } catch { /* ignore */ }
+  }
+  if (forbidden.length > 0) {
+    console.log(`Unstaged forbidden files: ${forbidden.join(", ")}`);
+  }
+
   const diff = execFileSync("git", ["diff", "--cached", "--stat"], { encoding: "utf-8" });
   if (!diff.trim()) {
     return { error: "No changes detected. Nothing to commit." };
@@ -449,7 +466,7 @@ async function main() {
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   const chat = ai.chats.create({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     config: {
       tools: [{ functionDeclarations: toolDeclarations }],
       systemInstruction: prompt,

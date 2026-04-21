@@ -156,6 +156,9 @@ async function splitIssue(subIssues) {
 
 async function finalizeRefinement(refinedBody, type, size, relatedIssues, duplicateOf) {
   if (duplicateOf) {
+    if (String(duplicateOf) === String(ISSUE_NUMBER)) {
+      throw new Error(`Refiner error: cannot mark issue #${ISSUE_NUMBER} as duplicate of itself. Re-run the agent without duplicate_of.`);
+    }
     await githubFetch(`/issues/${ISSUE_NUMBER}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -428,7 +431,7 @@ async function main() {
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   const chat = ai.chats.create({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     config: {
       tools: [{ functionDeclarations: toolDeclarations }],
       systemInstruction: systemPrompt,
