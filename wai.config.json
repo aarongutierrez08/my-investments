@@ -1,0 +1,24 @@
+{
+  "projectName": "my-investments",
+  "description": "Investment portfolio tracker — track purchases, categories and custom labels",
+  "providers": {
+    "git": "github",
+    "pm": "github-projects"
+  },
+  "stack": {
+    "language": "typescript",
+    "framework": "nextjs",
+    "testRunner": "vitest"
+  },
+  "agents": {
+    "refiner": {
+      "enabled": true,
+      "model": "gemini-2.5-flash"
+    },
+    "developer": {
+      "enabled": true,
+      "model": "gemini-2.5-flash"
+    }
+  },
+  "tdd": true
+}
