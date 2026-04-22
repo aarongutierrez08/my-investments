@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Category, Investment, Label } from '../lib/types';
 
 interface InvestmentsTableProps {
@@ -104,14 +105,22 @@ export function InvestmentsTable({
                   </td>
                   <td className="py-3 px-4">{totalInvested}</td>
                   <td className="py-3 px-4">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(investment.id)}
-                      disabled={isPending || deletingId === investment.id}
-                      className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-semibold px-3 py-1 rounded"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/edit/${investment.id}`}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-1 rounded"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(investment.id)}
+                        disabled={isPending || deletingId === investment.id}
+                        className="bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-semibold px-3 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

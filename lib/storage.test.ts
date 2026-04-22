@@ -78,6 +78,59 @@ describe('Storage Module', () => {
     expect(updatedInvestment?.instrument).toBe('GOOG'); // Ensure other fields are unchanged
   });
 
+  it('updateInvestment returns the updated investment on success', async () => {
+    const initial: Investment = {
+      id: uuidv4(),
+      instrument: 'MSFT',
+      amount: 2,
+      price: 200,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+    };
+    await storage.addInvestment(initial);
+
+    const result = await storage.updateInvestment(initial.id, { price: 250 });
+
+    expect(result).not.toBeNull();
+    expect(result?.id).toBe(initial.id);
+    expect(result?.price).toBe(250);
+    expect(result?.instrument).toBe('MSFT');
+  });
+
+  it('updateInvestment returns null when the id does not exist', async () => {
+    const result = await storage.updateInvestment('non-existent-id', { price: 999 });
+    expect(result).toBeNull();
+
+    const portfolio = await storage.readAll();
+    expect(portfolio.investments).toHaveLength(0);
+  });
+
+  it('updateInvestment preserves the original id even if the patch tries to change it', async () => {
+    const initial: Investment = {
+      id: uuidv4(),
+      instrument: 'NVDA',
+      amount: 1,
+      price: 500,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+    };
+    await storage.addInvestment(initial);
+
+    const result = await storage.updateInvestment(initial.id, {
+      id: 'attacker-supplied-id',
+      price: 550,
+    } as Partial<Investment>);
+
+    expect(result?.id).toBe(initial.id);
+
+    const portfolio = await storage.readAll();
+    expect(portfolio.investments).toHaveLength(1);
+    expect(portfolio.investments[0].id).toBe(initial.id);
+    expect(portfolio.investments.find(inv => inv.id === 'attacker-supplied-id')).toBeUndefined();
+  });
+
   // AC-005: removeInvestment
   it('should remove an investment', async () => {
     const investmentToRemove: Investment = {
