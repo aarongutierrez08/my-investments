@@ -112,6 +112,97 @@ describe('Storage Module', () => {
     expect(portfolio.investments.find(inv => inv.id === investmentToRemove.id)).toBeUndefined();
   });
 
+  it('deleteInvestment removes the matching investment and persists the new list', async () => {
+    const investmentToDelete: Investment = {
+      id: uuidv4(),
+      instrument: 'NFLX',
+      amount: 3,
+      price: 500,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+      notes: 'To be deleted',
+    };
+    const investmentToKeep: Investment = {
+      id: uuidv4(),
+      instrument: 'GOOG',
+      amount: 4,
+      price: 120,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+      notes: 'Keeper',
+    };
+
+    await storage.addInvestment(investmentToDelete);
+    await storage.addInvestment(investmentToKeep);
+
+    await storage.deleteInvestment(investmentToDelete.id);
+
+    const portfolio = await storage.readAll();
+    expect(portfolio.investments).toHaveLength(1);
+    expect(portfolio.investments[0]).toEqual(investmentToKeep);
+  });
+
+  it('deleteInvestment throws when the id does not exist', async () => {
+    const existing: Investment = {
+      id: uuidv4(),
+      instrument: 'AAPL',
+      amount: 1,
+      price: 100,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+    };
+    await storage.addInvestment(existing);
+
+    await expect(storage.deleteInvestment('non-existent-id')).rejects.toThrow();
+
+    const portfolio = await storage.readAll();
+    expect(portfolio.investments).toHaveLength(1);
+    expect(portfolio.investments[0]).toEqual(existing);
+  });
+
+  it('deleteInvestment leaves other investments untouched', async () => {
+    const a: Investment = {
+      id: uuidv4(),
+      instrument: 'A',
+      amount: 1,
+      price: 1,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+    };
+    const b: Investment = {
+      id: uuidv4(),
+      instrument: 'B',
+      amount: 2,
+      price: 2,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+    };
+    const c: Investment = {
+      id: uuidv4(),
+      instrument: 'C',
+      amount: 3,
+      price: 3,
+      purchaseDate: new Date().toISOString(),
+      categoryId: uuidv4(),
+      labelIds: [],
+    };
+
+    await storage.addInvestment(a);
+    await storage.addInvestment(b);
+    await storage.addInvestment(c);
+
+    await storage.deleteInvestment(b.id);
+
+    const portfolio = await storage.readAll();
+    expect(portfolio.investments).toHaveLength(2);
+    expect(portfolio.investments).toEqual([a, c]);
+  });
+
   // AC-006: addCategory
   it('should add a category and retrieve it', async () => {
     const newCategory: Category = {

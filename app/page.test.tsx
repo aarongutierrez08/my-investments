@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HomePage from './page';
 import { storage } from '../lib/storage';
 
@@ -9,6 +9,13 @@ vi.mock('../lib/storage', () => ({
   storage: {
     readAll: vi.fn(),
   },
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
 describe('HomePage', () => {
@@ -122,5 +129,107 @@ describe('HomePage', () => {
     expect(within(investment2Row).getByText('High Risk')).toBeInTheDocument();
     expect(within(investment2Row).getByRole('cell', { name: '1000.00' })).toBeInTheDocument();
 
+  });
+
+  describe('delete investment', () => {
+    const mockCategory = { id: 'cat1', name: 'Stocks', color: '#FF0000' };
+    const mockInvestment1 = {
+      id: 'inv1',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150.0,
+      purchaseDate: '2023-01-15',
+      categoryId: mockCategory.id,
+      labelIds: [],
+    };
+    const mockInvestment2 = {
+      id: 'inv2',
+      instrument: 'GOOG',
+      amount: 5,
+      price: 200.0,
+      purchaseDate: '2023-02-20',
+      categoryId: mockCategory.id,
+      labelIds: [],
+    };
+
+    beforeEach(() => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [mockInvestment1, mockInvestment2],
+        categories: [mockCategory],
+        labels: [],
+      });
+      vi.stubGlobal('fetch', vi.fn());
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it('renders a Delete button for each investment row', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      expect(deleteButtons).toHaveLength(2);
+    });
+
+    it('calls DELETE /api/investments/<id> when the user confirms', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(null, { status: 204 }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const rows = screen.getAllByRole('row');
+      const aaplRow = rows.find((row) =>
+        within(row).queryByRole('cell', { name: 'AAPL' }),
+      )!;
+      const deleteButton = within(aaplRow).getByRole('button', { name: /delete/i });
+
+      fireEvent.click(deleteButton);
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/investments/inv1',
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+
+    it('does NOT call fetch when the user cancels the confirm dialog', async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const deleteButton = screen.getAllByRole('button', { name: /delete/i })[0];
+      fireEvent.click(deleteButton);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('shows an inline error message when the API call fails', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(null, { status: 500 }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const deleteButton = screen.getAllByRole('button', { name: /delete/i })[0];
+      fireEvent.click(deleteButton);
+
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(/failed/i);
+    });
   });
 });
