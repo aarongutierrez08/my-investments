@@ -22,6 +22,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [nameSearch, setNameSearch] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -50,18 +51,45 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   }, [investments, categoryFilter, labelFilter, nameSearch]);
 
   const displayedInvestments = useMemo(() => {
-    if (sortDirection === null) {
-      return filteredInvestments;
+    if (sortDirection !== null) {
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) =>
+        sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount,
+      );
+      return sorted;
     }
-    const sorted = [...filteredInvestments];
-    sorted.sort((a, b) =>
-      sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount,
-    );
-    return sorted;
-  }, [filteredInvestments, sortDirection]);
+    if (dateSortDirection !== null) {
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) => {
+        const aDate = a.purchaseDate || '';
+        const bDate = b.purchaseDate || '';
+        if (aDate === bDate) return 0;
+        if (dateSortDirection === 'asc') {
+          if (aDate === '') return -1;
+          if (bDate === '') return 1;
+          return aDate < bDate ? -1 : 1;
+        }
+        if (aDate === '') return 1;
+        if (bDate === '') return -1;
+        return aDate < bDate ? 1 : -1;
+      });
+      return sorted;
+    }
+    return filteredInvestments;
+  }, [filteredInvestments, sortDirection, dateSortDirection]);
 
   function cycleSortDirection() {
+    setDateSortDirection(null);
     setSortDirection((prev) => {
+      if (prev === null) return 'desc';
+      if (prev === 'desc') return 'asc';
+      return null;
+    });
+  }
+
+  function cycleDateSortDirection() {
+    setSortDirection(null);
+    setDateSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
       return null;
@@ -199,7 +227,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                 </button>
               </th>
               <th className="py-3 px-4 text-left">Price</th>
-              <th className="py-3 px-4 text-left">Purchase date</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  dateSortDirection === 'asc'
+                    ? 'ascending'
+                    : dateSortDirection === 'desc'
+                      ? 'descending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleDateSortDirection}
+                  aria-label="Sort by date"
+                  className="inline-flex items-center gap-1"
+                >
+                  Purchase date
+                  <span aria-hidden="true">
+                    {dateSortDirection === 'desc' && '↓'}
+                    {dateSortDirection === 'asc' && '↑'}
+                    {dateSortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th className="py-3 px-4 text-left">Labels</th>
               <th className="py-3 px-4 text-left">Total invested</th>
               <th className="py-3 px-4 text-left">Actions</th>
