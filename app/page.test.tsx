@@ -807,6 +807,93 @@ describe('HomePage', () => {
     });
   });
 
+  describe('sort by amount', () => {
+    const invSmall = {
+      id: 'inv1',
+      instrument: 'SMALL',
+      amount: 5,
+      price: 1,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invLarge = {
+      id: 'inv2',
+      instrument: 'LARGE',
+      amount: 100,
+      price: 1,
+      purchaseDate: '2023-02-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMid = {
+      id: 'inv3',
+      instrument: 'MID',
+      amount: 50,
+      price: 1,
+      purchaseDate: '2023-03-01',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    beforeEach(() => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invSmall, invLarge, invMid],
+        labels: [],
+      });
+    });
+
+    it('AC-001: sorts rows from highest to lowest amount when descending sort is activated', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortButton);
+
+      expect(visibleInstruments()).toEqual(['LARGE', 'MID', 'SMALL']);
+    });
+
+    it('AC-002: toggling to ascending sorts from lowest to highest; a third toggle returns to insertion order', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortButton);
+      fireEvent.click(sortButton);
+      expect(visibleInstruments()).toEqual(['SMALL', 'MID', 'LARGE']);
+
+      fireEvent.click(sortButton);
+      expect(visibleInstruments()).toEqual(['SMALL', 'LARGE', 'MID']);
+    });
+
+    it('AC-003: sorting applies only to the filtered subset', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const sortButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortButton);
+
+      expect(visibleInstruments()).toEqual(['LARGE', 'SMALL']);
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',

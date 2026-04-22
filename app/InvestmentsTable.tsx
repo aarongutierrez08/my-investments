@@ -11,6 +11,7 @@ interface InvestmentsTableProps {
 }
 
 type CategoryFilter = Category | '';
+type SortDirection = 'asc' | 'desc' | null;
 
 export function InvestmentsTable({ investments, labels: labelsData }: InvestmentsTableProps) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [nameSearch, setNameSearch] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -46,6 +48,25 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       return true;
     });
   }, [investments, categoryFilter, labelFilter, nameSearch]);
+
+  const displayedInvestments = useMemo(() => {
+    if (sortDirection === null) {
+      return filteredInvestments;
+    }
+    const sorted = [...filteredInvestments];
+    sorted.sort((a, b) =>
+      sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount,
+    );
+    return sorted;
+  }, [filteredInvestments, sortDirection]);
+
+  function cycleSortDirection() {
+    setSortDirection((prev) => {
+      if (prev === null) return 'desc';
+      if (prev === 'desc') return 'asc';
+      return null;
+    });
+  }
 
   const totalInvested = filteredInvestments.reduce(
     (sum, investment) => sum + investment.amount,
@@ -153,7 +174,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             <tr>
               <th className="py-3 px-4 text-left">Instrument</th>
               <th className="py-3 px-4 text-left">Category</th>
-              <th className="py-3 px-4 text-left">Amount</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  sortDirection === 'asc'
+                    ? 'ascending'
+                    : sortDirection === 'desc'
+                      ? 'descending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleSortDirection}
+                  aria-label="Sort by amount"
+                  className="inline-flex items-center gap-1"
+                >
+                  Amount
+                  <span aria-hidden="true">
+                    {sortDirection === 'desc' && '↓'}
+                    {sortDirection === 'asc' && '↑'}
+                    {sortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th className="py-3 px-4 text-left">Price</th>
               <th className="py-3 px-4 text-left">Purchase date</th>
               <th className="py-3 px-4 text-left">Labels</th>
@@ -162,7 +206,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             </tr>
           </thead>
           <tbody className="text-gray-700">
-            {filteredInvestments.map((investment) => {
+            {displayedInvestments.map((investment) => {
               const labels = investment.labelIds
                 .map((labelId) => labelsData.find((lbl) => lbl.id === labelId))
                 .filter((l): l is Label => l !== undefined);
