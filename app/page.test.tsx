@@ -894,6 +894,150 @@ describe('HomePage', () => {
     });
   });
 
+  describe('sort by purchase date', () => {
+    const invOldDate = {
+      id: 'inv-old',
+      instrument: 'GOOG',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2022-03-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMidDate = {
+      id: 'inv-mid',
+      instrument: 'TSLA',
+      amount: 50,
+      price: 1,
+      purchaseDate: '2023-01-10',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invNewDate = {
+      id: 'inv-new',
+      instrument: 'AAPL',
+      amount: 5,
+      price: 1,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invNoDate = {
+      id: 'inv-nodate',
+      instrument: 'MSFT',
+      amount: 20,
+      price: 1,
+      purchaseDate: '',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    it('AC-001: exposes a "Sort by date" control alongside the existing "Sort by amount" control', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invOldDate, invMidDate, invNewDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByRole('button', { name: /sort by amount/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sort by date/i })).toBeInTheDocument();
+    });
+
+    it('AC-002: sorts rows newest first when "Date (newest first)" is selected', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invOldDate, invNewDate, invMidDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'TSLA', 'GOOG']);
+    });
+
+    it('AC-003: sorts rows oldest first when "Date (oldest first)" is selected', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invOldDate, invNewDate, invMidDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+      fireEvent.click(sortDateButton);
+
+      expect(visibleInstruments()).toEqual(['GOOG', 'TSLA', 'AAPL']);
+    });
+
+    it('AC-002: places investments without a purchase date at the bottom when sorting newest first', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invNoDate, invOldDate, invNewDate, invMidDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'TSLA', 'GOOG', 'MSFT']);
+    });
+
+    it('AC-003: places investments without a purchase date at the top when sorting oldest first', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invOldDate, invNewDate, invNoDate, invMidDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+      fireEvent.click(sortDateButton);
+
+      expect(visibleInstruments()).toEqual(['MSFT', 'GOOG', 'TSLA', 'AAPL']);
+    });
+
+    it('AC-004: amount sort still works after the date sort options are introduced (regression)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invMidDate, invOldDate, invNewDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortAmountButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortAmountButton);
+
+      expect(visibleInstruments()).toEqual(['TSLA', 'GOOG', 'AAPL']);
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',

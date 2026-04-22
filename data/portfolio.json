@@ -1,36 +1,6 @@
 {
   "investments": [
     {
-      "id": "inv-003",
-      "instrument": "BTC",
-      "amount": 0.05,
-      "price": 62000,
-      "purchaseDate": "2026-02-10",
-      "categoryId": "cat-crypto",
-      "labelIds": [
-        "lbl-highrisk",
-        "lbl-longterm"
-      ],
-      "notes": "DCA entry",
-      "labels": [],
-      "category": "Other"
-    },
-    {
-      "id": "inv-005",
-      "instrument": "VOO",
-      "amount": 8,
-      "price": 495.75,
-      "purchaseDate": "2026-03-22",
-      "categoryId": "cat-etf",
-      "labelIds": [
-        "lbl-longterm",
-        "lbl-dividend"
-      ],
-      "notes": "S&P 500 tracker — core position",
-      "labels": [],
-      "category": "Other"
-    },
-    {
       "id": "inv-006",
       "instrument": "AL30",
       "amount": 100,
@@ -42,7 +12,7 @@
       ],
       "notes": "Argentine sovereign bond",
       "labels": [],
-      "category": "Other"
+      "category": "Crypto"
     }
   ],
   "labels": [
