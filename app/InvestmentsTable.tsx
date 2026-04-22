@@ -21,7 +21,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [nameSearch, setNameSearch] = useState<string>('');
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
 
