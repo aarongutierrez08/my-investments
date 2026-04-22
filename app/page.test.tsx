@@ -556,6 +556,130 @@ describe('HomePage', () => {
     });
   });
 
+  describe('total by category breakdown', () => {
+    it('AC-001: shows a row per category with the sum of investment amounts', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 's2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'c1',
+            instrument: 'BTC',
+            amount: 700,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            category: 'Crypto',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        screen.getByRole('heading', { name: /total by category/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Stocks: $300')).toBeInTheDocument();
+      expect(screen.getByText('Crypto: $700')).toBeInTheDocument();
+    });
+
+    it('AC-002: groups investments without a category under an "Uncategorized" row', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 's2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'u1',
+            instrument: 'XYZ',
+            amount: 75,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Stocks: $300')).toBeInTheDocument();
+      expect(screen.getByText('Uncategorized: $75')).toBeInTheDocument();
+    });
+
+    it('AC-003: does not render the breakdown section when there are no investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        screen.queryByRole('heading', { name: /total by category/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not list categories that have no investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Stocks: $100')).toBeInTheDocument();
+      expect(screen.queryByText(/^Crypto:/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Bonds:/)).not.toBeInTheDocument();
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',
