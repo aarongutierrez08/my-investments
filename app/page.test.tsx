@@ -1740,6 +1740,175 @@ describe('HomePage', () => {
     });
   });
 
+  describe('filter by purchase date range', () => {
+    const invJan = {
+      id: 'inv-jan',
+      instrument: 'AAA',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invFeb = {
+      id: 'inv-feb',
+      instrument: 'BBB',
+      amount: 20,
+      price: 1,
+      purchaseDate: '2023-02-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMar = {
+      id: 'inv-mar',
+      instrument: 'CCC',
+      amount: 30,
+      price: 1,
+      purchaseDate: '2023-03-15',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+    const invApr = {
+      id: 'inv-apr',
+      instrument: 'DDD',
+      amount: 40,
+      price: 1,
+      purchaseDate: '2023-04-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    beforeEach(() => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invJan, invFeb, invMar, invApr],
+        labels: [],
+      });
+    });
+
+    it('AC-001: shows only investments with purchaseDate >= from when only "From" is set', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      fireEvent.change(fromInput, { target: { value: '2023-02-15' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).not.toContain('AAA');
+      expect(instruments).toContain('BBB');
+      expect(instruments).toContain('CCC');
+      expect(instruments).toContain('DDD');
+    });
+
+    it('AC-002: shows only investments within the inclusive range and totals reflect those rows when both "From" and "To" are set', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      const toInput = screen.getByLabelText('To');
+      fireEvent.change(fromInput, { target: { value: '2023-02-15' } });
+      fireEvent.change(toInput, { target: { value: '2023-03-15' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('BBB');
+      expect(instruments).toContain('CCC');
+      expect(instruments).not.toContain('AAA');
+      expect(instruments).not.toContain('DDD');
+
+      expect(screen.getByText('Total invested: $50')).toBeInTheDocument();
+    });
+
+    it('AC-003: composes with the category filter (AND)', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      const toInput = screen.getByLabelText('To');
+      fireEvent.change(fromInput, { target: { value: '2023-02-15' } });
+      fireEvent.change(toInput, { target: { value: '2023-04-15' } });
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('BBB');
+      expect(instruments).toContain('DDD');
+      expect(instruments).not.toContain('AAA');
+      expect(instruments).not.toContain('CCC');
+    });
+
+    it('shows only investments with purchaseDate <= to when only "To" is set', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const toInput = screen.getByLabelText('To');
+      fireEvent.change(toInput, { target: { value: '2023-02-15' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAA');
+      expect(instruments).toContain('BBB');
+      expect(instruments).not.toContain('CCC');
+      expect(instruments).not.toContain('DDD');
+    });
+
+    it('includes investments whose purchaseDate equals the From or To boundary (range is inclusive)', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      const toInput = screen.getByLabelText('To');
+      fireEvent.change(fromInput, { target: { value: '2023-01-15' } });
+      fireEvent.change(toInput, { target: { value: '2023-04-15' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAA');
+      expect(instruments).toContain('DDD');
+    });
+
+    it('renders an empty list when From is later than To', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      const toInput = screen.getByLabelText('To');
+      fireEvent.change(fromInput, { target: { value: '2023-04-15' } });
+      fireEvent.change(toInput, { target: { value: '2023-01-15' } });
+
+      expect(visibleInstruments()).toEqual([]);
+    });
+
+    it('clearing the From date relaxes the filter and shows every investment again', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      fireEvent.change(fromInput, { target: { value: '2023-03-01' } });
+      expect(visibleInstruments()).not.toContain('AAA');
+
+      fireEvent.change(fromInput, { target: { value: '' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAA');
+      expect(instruments).toContain('BBB');
+      expect(instruments).toContain('CCC');
+      expect(instruments).toContain('DDD');
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',

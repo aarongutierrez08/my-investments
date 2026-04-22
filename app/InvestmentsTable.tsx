@@ -21,6 +21,8 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
   const [labelFilter, setLabelFilter] = useState<string>('');
   const [nameSearch, setNameSearch] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
@@ -48,9 +50,15 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       if (trimmedSearch && !investment.instrument.toLowerCase().includes(trimmedSearch)) {
         return false;
       }
+      if (fromDate || toDate) {
+        const purchaseDate = investment.purchaseDate || '';
+        if (!purchaseDate) return false;
+        if (fromDate && purchaseDate < fromDate) return false;
+        if (toDate && purchaseDate > toDate) return false;
+      }
       return true;
     });
-  }, [investments, categoryFilter, labelFilter, nameSearch]);
+  }, [investments, categoryFilter, labelFilter, nameSearch, fromDate, toDate]);
 
   const displayedInvestments = useMemo(() => {
     if (sortDirection !== null) {
@@ -250,6 +258,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label htmlFor="from-date" className="block text-sm font-medium mb-1">
+            From
+          </label>
+          <input
+            id="from-date"
+            type="date"
+            value={fromDate}
+            onChange={(event) => setFromDate(event.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
+        <div>
+          <label htmlFor="to-date" className="block text-sm font-medium mb-1">
+            To
+          </label>
+          <input
+            id="to-date"
+            type="date"
+            value={toDate}
+            onChange={(event) => setToDate(event.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          />
         </div>
       </div>
       {filteredInvestments.length === 0 ? (
