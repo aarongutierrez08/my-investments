@@ -13,6 +13,8 @@ interface InvestmentsTableProps {
 type CategoryFilter = Category | '';
 type SortDirection = 'asc' | 'desc' | null;
 
+const UNCATEGORIZED = 'Uncategorized';
+
 export function InvestmentsTable({ investments, labels: labelsData }: InvestmentsTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -168,6 +170,24 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     0,
   );
 
+  const isFiltered =
+    categoryFilter !== '' ||
+    labelFilter !== '' ||
+    nameSearch.trim() !== '' ||
+    fromDate !== '' ||
+    toDate !== '';
+
+  const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
+
+  const categoryBreakdown = useMemo(() => {
+    const breakdown = new Map<string, number>();
+    for (const investment of filteredInvestments) {
+      const key = (investment.category as string | undefined) || UNCATEGORIZED;
+      breakdown.set(key, (breakdown.get(key) ?? 0) + investment.amount);
+    }
+    return breakdown;
+  }, [filteredInvestments]);
+
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this investment?')) {
       return;
@@ -195,7 +215,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   if (investments.length === 0) {
     return (
       <>
-        <p className="mb-4 text-lg font-semibold">Total invested: ${totalInvested}</p>
+        <p className="mb-4 text-lg font-semibold">
+          {totalInvestedLabel}: ${totalInvested}
+        </p>
         <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
       </>
     );
@@ -208,7 +230,23 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           {error}
         </div>
       )}
-      <p className="mb-4 text-lg font-semibold">Total invested: ${totalInvested}</p>
+      <p className="mb-4 text-lg font-semibold">
+        {totalInvestedLabel}: ${totalInvested}
+      </p>
+      {categoryBreakdown.size > 0 && (
+        <section aria-labelledby="total-by-category-heading" className="mb-6">
+          <h2 id="total-by-category-heading" className="text-lg font-semibold mb-2">
+            Total by category
+          </h2>
+          <ul className="list-disc list-inside">
+            {Array.from(categoryBreakdown.entries()).map(([name, total]) => (
+              <li key={name}>
+                {name}: ${total}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="mb-4 flex flex-wrap gap-4">
         <div>
           <label htmlFor="name-search" className="block text-sm font-medium mb-1">
