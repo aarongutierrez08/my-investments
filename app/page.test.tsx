@@ -557,6 +557,155 @@ describe('HomePage', () => {
     });
   });
 
+  describe('filtered investments count summary', () => {
+    const stockInv = {
+      id: 'i1',
+      instrument: 'AAPL',
+      amount: 100,
+      price: 1,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+    };
+    const cryptoInv = {
+      id: 'i2',
+      instrument: 'BTC',
+      amount: 250,
+      price: 1,
+      purchaseDate: '2023-01-02',
+      category: 'Crypto',
+      labelIds: [],
+    };
+    const bondInv = {
+      id: 'i3',
+      instrument: 'US10Y',
+      amount: 75,
+      price: 1,
+      purchaseDate: '2023-01-03',
+      category: 'Bonds',
+      labelIds: [],
+    };
+
+    it('AC-001: shows the total number of investments with plural wording when no filters are active', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv, bondInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Showing 3 investments')).toBeInTheDocument();
+    });
+
+    it('AC-001: uses the singular label when exactly one investment is shown', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the count when a category filter narrows the list', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv, bondInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Showing 3 investments')).toBeInTheDocument();
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+
+      expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the count when the search box narrows the list', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv, bondInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'BTC' } });
+
+      expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the count when a date range narrows the list', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv, bondInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const fromInput = screen.getByLabelText('From');
+      const toInput = screen.getByLabelText('To');
+      fireEvent.change(fromInput, { target: { value: '2023-01-02' } });
+      fireEvent.change(toInput, { target: { value: '2023-01-02' } });
+
+      expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the count when a label filter narrows the list', async () => {
+      const withLabel = {
+        ...stockInv,
+        labels: ['long-term'],
+      };
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [withLabel, cryptoInv, bondInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by label/i });
+      fireEvent.change(select, { target: { value: 'long-term' } });
+
+      expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
+    });
+
+    it('AC-003: shows "Showing 0 investments" when the active filters match nothing', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
+
+      expect(screen.getByText('Showing 0 investments')).toBeInTheDocument();
+    });
+
+    it('AC-003: shows "Showing 0 investments" when the list is empty with no filters', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Showing 0 investments')).toBeInTheDocument();
+    });
+  });
+
   describe('filter by custom label', () => {
     const invCryptoLong = {
       id: 'inv1',
