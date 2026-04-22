@@ -445,7 +445,115 @@ describe('HomePage', () => {
       const select = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(select, { target: { value: 'Stocks' } });
 
-      expect(screen.getByText('Total invested: $100')).toBeInTheDocument();
+      expect(screen.getByText('Total invested (filtered): $100')).toBeInTheDocument();
+    });
+
+    it('shows "Total invested (filtered)" with the filtered sum when a category filter is active', async () => {
+      const stockInv = {
+        id: 'i1',
+        instrument: 'A',
+        amount: 100,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      const cryptoInv = {
+        id: 'i2',
+        instrument: 'B',
+        amount: 250,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Crypto',
+        labelIds: [],
+      };
+      const bondInv = {
+        id: 'i3',
+        instrument: 'C',
+        amount: 75,
+        price: 1,
+        purchaseDate: '2023-01-03',
+        category: 'Bonds',
+        labelIds: [],
+      };
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv, bondInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Crypto' } });
+
+      expect(screen.getByText('Total invested (filtered): $250')).toBeInTheDocument();
+    });
+
+    it('shows "Total invested (filtered): $0" when an active search matches no investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
+
+      expect(screen.getByText('Total invested (filtered): $0')).toBeInTheDocument();
+    });
+
+    it('uses the unfiltered "Total invested" label and full sum when no filters are active', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 250,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Crypto',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Total invested: $350')).toBeInTheDocument();
+      expect(screen.queryByText(/filtered/i)).not.toBeInTheDocument();
     });
   });
 
@@ -1829,7 +1937,7 @@ describe('HomePage', () => {
       expect(instruments).not.toContain('AAA');
       expect(instruments).not.toContain('DDD');
 
-      expect(screen.getByText('Total invested: $50')).toBeInTheDocument();
+      expect(screen.getByText('Total invested (filtered): $50')).toBeInTheDocument();
     });
 
     it('AC-003: composes with the category filter (AND)', async () => {
