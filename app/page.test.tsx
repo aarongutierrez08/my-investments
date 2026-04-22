@@ -449,6 +449,113 @@ describe('HomePage', () => {
     });
   });
 
+  describe('filter by custom label', () => {
+    const invCryptoLong = {
+      id: 'inv1',
+      instrument: 'BTC',
+      amount: 1,
+      price: 30000,
+      purchaseDate: '2023-01-15',
+      category: 'Crypto',
+      labelIds: [],
+      labels: ['long-term', 'crypto'],
+    };
+    const invStockLong = {
+      id: 'inv2',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2023-02-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['long-term', 'dividends'],
+    };
+    const invStockShort = {
+      id: 'inv3',
+      instrument: 'TSLA',
+      amount: 2,
+      price: 200,
+      purchaseDate: '2023-03-10',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['short-term'],
+    };
+
+    beforeEach(() => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invCryptoLong, invStockLong, invStockShort],
+        labels: [],
+      });
+    });
+
+    it('AC-001: renders a "Filter by label" dropdown with all labels in use (deduplicated, sorted) plus "All labels"', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by label/i }) as HTMLSelectElement;
+      const optionTexts = Array.from(select.options).map((o) => o.textContent);
+
+      expect(optionTexts).toEqual(['All labels', 'crypto', 'dividends', 'long-term', 'short-term']);
+    });
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.match(/^[A-Z]+/)?.[0] ?? '',
+      );
+    }
+
+    it('AC-002: shows only investments that include the selected label', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by label/i });
+      fireEvent.change(select, { target: { value: 'long-term' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('BTC');
+      expect(instruments).toContain('AAPL');
+      expect(instruments).not.toContain('TSLA');
+    });
+
+    it('AC-003: combines with the category filter (AND)', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const labelSelect = screen.getByRole('combobox', { name: /filter by label/i });
+      fireEvent.change(labelSelect, { target: { value: 'long-term' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['AAPL']);
+    });
+
+    it('selecting "All labels" restores the list to what the category filter alone would show', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const labelSelect = screen.getByRole('combobox', { name: /filter by label/i });
+      fireEvent.change(labelSelect, { target: { value: 'long-term' } });
+      expect(visibleInstruments()).not.toContain('TSLA');
+
+      fireEvent.change(labelSelect, { target: { value: '' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAPL');
+      expect(instruments).toContain('TSLA');
+      expect(instruments).not.toContain('BTC');
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',
