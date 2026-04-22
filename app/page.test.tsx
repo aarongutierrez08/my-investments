@@ -174,6 +174,21 @@ describe('HomePage', () => {
       expect(deleteButtons).toHaveLength(2);
     });
 
+    it('renders an Edit link for each investment row pointing to /edit/<id>', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const editLinks = screen.getAllByRole('link', { name: /edit/i });
+      expect(editLinks).toHaveLength(2);
+
+      const rows = screen.getAllByRole('row');
+      const aaplRow = rows.find((row) =>
+        within(row).queryByRole('cell', { name: 'AAPL' }),
+      )!;
+      const aaplEditLink = within(aaplRow).getByRole('link', { name: /edit/i }) as HTMLAnchorElement;
+      expect(aaplEditLink.getAttribute('href')).toBe('/edit/inv1');
+    });
+
     it('calls DELETE /api/investments/<id> when the user confirms', async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         new Response(null, { status: 204 }),

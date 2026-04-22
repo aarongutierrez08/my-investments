@@ -1,17 +1,7 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { storage } from '../../../lib/storage';
+import { investmentSchema } from './schema';
 import type { Investment } from '../../../lib/types';
-
-const investmentSchema = z.object({
-  instrument: z.string().trim().min(1, 'Instrument is required'),
-  amount: z.number().positive('Amount must be a positive number'),
-  price: z.number().positive('Price must be a positive number'),
-  purchaseDate: z.string().min(1, 'Purchase date is required'),
-  categoryId: z.string().min(1, 'Category is required'),
-  labelIds: z.array(z.string()).default([]),
-  notes: z.string().optional(),
-});
 
 export async function POST(request: Request) {
   let payload: unknown;

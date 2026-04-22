@@ -48,13 +48,17 @@ async function addInvestment(investment: Investment): Promise<void> {
   await _writeAll(portfolio);
 }
 
-async function updateInvestment(id: string, patch: Partial<Investment>): Promise<void> {
+async function updateInvestment(id: string, patch: Partial<Investment>): Promise<Investment | null> {
   const portfolio = await _readAll();
   const index = portfolio.investments.findIndex(inv => inv.id === id);
-  if (index !== -1) {
-    portfolio.investments[index] = { ...portfolio.investments[index], ...patch };
-    await _writeAll(portfolio);
+  if (index === -1) {
+    return null;
   }
+  const { id: _ignoredId, ...safePatch } = patch;
+  const updated: Investment = { ...portfolio.investments[index], ...safePatch, id };
+  portfolio.investments[index] = updated;
+  await _writeAll(portfolio);
+  return updated;
 }
 
 async function removeInvestment(id: string): Promise<void> {
