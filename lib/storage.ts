@@ -63,6 +63,16 @@ async function removeInvestment(id: string): Promise<void> {
   await _writeAll(portfolio);
 }
 
+async function deleteInvestment(id: string): Promise<void> {
+  const portfolio = await _readAll();
+  const index = portfolio.investments.findIndex(inv => inv.id === id);
+  if (index === -1) {
+    throw new Error(`Investment with id "${id}" not found.`);
+  }
+  portfolio.investments.splice(index, 1);
+  await _writeAll(portfolio);
+}
+
 async function addCategory(category: Category): Promise<void> {
   const portfolio = await _readAll();
   portfolio.categories.push(category);
@@ -104,6 +114,7 @@ export const storage = {
   addInvestment: addInvestment,
   updateInvestment: updateInvestment,
   removeInvestment: removeInvestment,
+  deleteInvestment: deleteInvestment,
   addCategory: addCategory,
   removeCategory: removeCategory,
   addLabel: addLabel,
