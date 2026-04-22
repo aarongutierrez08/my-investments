@@ -1105,8 +1105,8 @@ describe('HomePage', () => {
       expect(
         screen.getByRole('heading', { name: /total by category/i }),
       ).toBeInTheDocument();
-      expect(screen.getByText('Stocks: $300')).toBeInTheDocument();
-      expect(screen.getByText('Crypto: $700')).toBeInTheDocument();
+      expect(screen.getByText(/^Stocks: \$300\b/)).toBeInTheDocument();
+      expect(screen.getByText(/^Crypto: \$700\b/)).toBeInTheDocument();
     });
 
     it('AC-002: groups investments without a category under an "Uncategorized" row', async () => {
@@ -1145,8 +1145,8 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(screen.getByText('Stocks: $300')).toBeInTheDocument();
-      expect(screen.getByText('Uncategorized: $75')).toBeInTheDocument();
+      expect(screen.getByText(/^Stocks: \$300\b/)).toBeInTheDocument();
+      expect(screen.getByText(/^Uncategorized: \$75\b/)).toBeInTheDocument();
     });
 
     it('AC-003: does not render the breakdown section when there are no investments', async () => {
@@ -1182,9 +1182,125 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(screen.getByText('Stocks: $100')).toBeInTheDocument();
+      expect(screen.getByText(/^Stocks: \$100\b/)).toBeInTheDocument();
       expect(screen.queryByText(/^Crypto:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Bonds:/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("issue #59: each category's share of the portfolio", () => {
+    it('AC-001: each per-category total shows its rounded percentage of the filtered total', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 't1',
+            instrument: 'AAPL',
+            amount: 12000,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'r1',
+            instrument: 'HOUSE',
+            amount: 9000,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Real Estate',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'c1',
+            instrument: 'USD',
+            amount: 9000,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            category: 'Cash',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Stocks: $12000 (40%)')).toBeInTheDocument();
+      expect(screen.getByText('Real Estate: $9000 (30%)')).toBeInTheDocument();
+      expect(screen.getByText('Cash: $9000 (30%)')).toBeInTheDocument();
+    });
+
+    it('AC-002: percentages recompute against the new filtered total when filters change', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'c1',
+            instrument: 'BTC',
+            amount: 700,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Crypto',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Stocks: $300 (30%)')).toBeInTheDocument();
+      expect(screen.getByText('Crypto: $700 (70%)')).toBeInTheDocument();
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Crypto' } });
+
+      expect(screen.queryByText(/^Stocks:/)).not.toBeInTheDocument();
+      expect(screen.getByText('Crypto: $700 (100%)')).toBeInTheDocument();
+    });
+
+    it('AC-003: does not render a percentage when the filtered total is 0', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name or label');
+      fireEvent.change(search, { target: { value: 'no-match-xyz' } });
+
+      expect(
+        screen.queryByRole('heading', { name: /total by category/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/\(\d+%\)/)).not.toBeInTheDocument();
     });
   });
 
