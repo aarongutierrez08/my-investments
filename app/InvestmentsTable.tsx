@@ -112,9 +112,23 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
               const totalInvested = (investment.amount * investment.price).toFixed(2);
 
+              const customLabels = investment.labels ?? [];
+
               return (
                 <tr key={investment.id} className="border-b border-gray-200 hover:bg-gray-100">
-                  <td className="py-3 px-4">{investment.instrument}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{investment.instrument}</span>
+                      {customLabels.map((label) => (
+                        <span
+                          key={label}
+                          className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full"
+                        >
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
                   <td className="py-3 px-4">{investment.category}</td>
                   <td className="py-3 px-4">{investment.amount}</td>
                   <td className="py-3 px-4">{investment.price.toFixed(2)}</td>

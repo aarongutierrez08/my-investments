@@ -202,4 +202,91 @@ describe('POST /api/investments', () => {
     expect(response.status).toBe(201);
     expect(body.labelIds).toEqual([]);
   });
+
+  describe('custom labels (free-text)', () => {
+    it('persists the provided labels on the created investment', async () => {
+      const payload = {
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labels: ['long-term', 'tech'],
+      };
+
+      const response = await POST(makeRequest(payload));
+      const body = (await response.json()) as Investment;
+
+      expect(response.status).toBe(201);
+      expect(body.labels).toEqual(['long-term', 'tech']);
+      expect(storage.addInvestment).toHaveBeenCalledWith(
+        expect.objectContaining({ labels: ['long-term', 'tech'] }),
+      );
+    });
+
+    it('defaults labels to an empty array when omitted', async () => {
+      const payload = {
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+      };
+
+      const response = await POST(makeRequest(payload));
+      const body = (await response.json()) as Investment;
+
+      expect(response.status).toBe(201);
+      expect(body.labels).toEqual([]);
+    });
+
+    it('returns 400 when labels is not an array', async () => {
+      const payload = {
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labels: 'not-an-array',
+      };
+
+      const response = await POST(makeRequest(payload));
+
+      expect(response.status).toBe(400);
+      expect(storage.addInvestment).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when labels is an array but contains non-strings', async () => {
+      const payload = {
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labels: ['ok', 42],
+      };
+
+      const response = await POST(makeRequest(payload));
+
+      expect(response.status).toBe(400);
+      expect(storage.addInvestment).not.toHaveBeenCalled();
+    });
+
+    it('trims whitespace and drops case-insensitive duplicates', async () => {
+      const payload = {
+        instrument: 'BTC',
+        amount: 0.1,
+        price: 60000,
+        purchaseDate: '2026-02-01',
+        category: 'Crypto',
+        labels: ['crypto', 'CRYPTO', '  crypto  ', 'long-term'],
+      };
+
+      const response = await POST(makeRequest(payload));
+      const body = (await response.json()) as Investment;
+
+      expect(response.status).toBe(201);
+      expect(body.labels).toEqual(['crypto', 'long-term']);
+    });
+  });
 });

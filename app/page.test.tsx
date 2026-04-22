@@ -303,6 +303,64 @@ describe('HomePage', () => {
     });
   });
 
+  describe('custom free-text labels on investment rows', () => {
+    function findRowByInstrument(instrument: string) {
+      const rows = screen.getAllByRole('row');
+      return rows.find((row) =>
+        within(row).queryByRole('cell', { name: new RegExp(instrument, 'i') }),
+      )!;
+    }
+
+    it('renders each free-text label as a badge next to the instrument name', async () => {
+      const investment = {
+        id: 'inv-with-labels',
+        instrument: 'AAPL',
+        amount: 1,
+        price: 100,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['crypto', 'long-term'],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('AAPL');
+      expect(within(row).getByText('crypto')).toBeInTheDocument();
+      expect(within(row).getByText('long-term')).toBeInTheDocument();
+    });
+
+    it('renders nothing extra when the investment has no free-text labels', async () => {
+      const investment = {
+        id: 'inv-no-labels',
+        instrument: 'AAPL',
+        amount: 1,
+        price: 100,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('AAPL');
+      expect(within(row).queryByText(/no labels/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe('total invested summary', () => {
     it('AC-001: shows "Total invested: $<sum>" above the table with the sum of all amounts', async () => {
       const inv1 = {

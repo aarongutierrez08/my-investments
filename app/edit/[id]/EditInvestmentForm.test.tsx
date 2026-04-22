@@ -27,6 +27,7 @@ const investment: Investment = {
   purchaseDate: '2026-01-15',
   category: 'Stocks',
   labelIds: ['lbl-longterm'],
+  labels: [],
   notes: 'Initial position',
 };
 
