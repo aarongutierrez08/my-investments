@@ -3,18 +3,25 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Investment, Label } from '../lib/types';
+import { CATEGORIES, type Category, type Investment, type Label } from '../lib/types';
 
 interface InvestmentsTableProps {
   investments: Investment[];
   labels: Label[];
 }
 
+type CategoryFilter = Category | '';
+
 export function InvestmentsTable({ investments, labels: labelsData }: InvestmentsTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
+
+  const filteredInvestments = categoryFilter
+    ? investments.filter((investment) => investment.category === categoryFilter)
+    : investments;
 
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this investment?')) {
@@ -47,6 +54,27 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           {error}
         </div>
       )}
+      <div className="mb-4">
+        <label htmlFor="category-filter" className="block text-sm font-medium mb-1">
+          Filter by category
+        </label>
+        <select
+          id="category-filter"
+          value={categoryFilter}
+          onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
+          className="border border-gray-300 rounded px-3 py-2"
+        >
+          <option value="">All categories</option>
+          {CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </div>
+      {filteredInvestments.length === 0 ? (
+        <p className="text-center text-gray-500">No investments in this category.</p>
+      ) : (
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
           <thead className="bg-gray-800 text-white">
@@ -62,7 +90,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             </tr>
           </thead>
           <tbody className="text-gray-700">
-            {investments.map((investment) => {
+            {filteredInvestments.map((investment) => {
               const labels = investment.labelIds
                 .map((labelId) => labelsData.find((lbl) => lbl.id === labelId))
                 .filter((l): l is Label => l !== undefined);
@@ -112,6 +140,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           </tbody>
         </table>
       </div>
+      )}
     </>
   );
 }
