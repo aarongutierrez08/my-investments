@@ -139,6 +139,59 @@ describe('POST /api/investments', () => {
     expect(storage.addInvestment).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when purchaseDate is missing', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      category: 'Stocks',
+      labelIds: [],
+    };
+
+    const response = await POST(makeRequest(payload));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toHaveProperty('error');
+    expect(body.error).toMatch(/purchaseDate/i);
+    expect(storage.addInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when purchaseDate is not a valid ISO date', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: 'not-a-date',
+      category: 'Stocks',
+      labelIds: [],
+    };
+
+    const response = await POST(makeRequest(payload));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toHaveProperty('error');
+    expect(body.error).toMatch(/purchaseDate/i);
+    expect(storage.addInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when purchaseDate is not in YYYY-MM-DD format', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '15/01/2026',
+      category: 'Stocks',
+      labelIds: [],
+    };
+
+    const response = await POST(makeRequest(payload));
+
+    expect(response.status).toBe(400);
+    expect(storage.addInvestment).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when category is missing', async () => {
     const payload = {
       instrument: 'AAPL',

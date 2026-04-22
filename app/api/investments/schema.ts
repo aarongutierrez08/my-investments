@@ -23,7 +23,7 @@ export const investmentSchema = z.object({
   instrument: z.string().trim().min(1, 'Instrument is required'),
   amount: z.number().positive('Amount must be a positive number'),
   price: z.number().positive('Price must be a positive number'),
-  purchaseDate: z.string().min(1, 'Purchase date is required'),
+  purchaseDate: z.iso.date('Purchase date must be a valid ISO date (YYYY-MM-DD)'),
   category: z.enum(CATEGORIES, {
     message: `Category must be one of: ${CATEGORIES.join(', ')}`,
   }),
