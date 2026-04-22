@@ -20,10 +20,13 @@ async function ensureDataDirectory() {
 }
 
 function backfillInvestment(raw: Partial<Investment> & Record<string, unknown>): Investment {
-  if (raw.category) {
-    return raw as Investment;
+  const withLabels: Investment = Array.isArray(raw.labels)
+    ? (raw as Investment)
+    : { ...(raw as Investment), labels: [] };
+  if (withLabels.category) {
+    return withLabels;
   }
-  return { ...(raw as Investment), category: 'Other' };
+  return { ...withLabels, category: 'Other' };
 }
 
 async function _readAll(): Promise<PortfolioData> {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type FormEvent } from 'react';
+import { useState, useTransition, type FormEvent, type KeyboardEvent, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CATEGORIES, type Label } from '../../lib/types';
@@ -15,6 +15,42 @@ export function AddInvestmentForm({ labels, defaultDate }: AddInvestmentFormProp
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [customLabels, setCustomLabels] = useState<string[]>([]);
+  const [labelDraft, setLabelDraft] = useState('');
+
+  function addLabel(raw: string) {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      return;
+    }
+    setCustomLabels((current) =>
+      current.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())
+        ? current
+        : [...current, trimmed],
+    );
+  }
+
+  function handleLabelKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      addLabel(labelDraft);
+      setLabelDraft('');
+    }
+  }
+
+  function handleLabelChange(event: ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+    if (value.endsWith(',')) {
+      addLabel(value.slice(0, -1));
+      setLabelDraft('');
+      return;
+    }
+    setLabelDraft(value);
+  }
+
+  function removeLabel(label: string) {
+    setCustomLabels((current) => current.filter((existing) => existing !== label));
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,6 +67,15 @@ export function AddInvestmentForm({ labels, defaultDate }: AddInvestmentFormProp
       return;
     }
 
+    const pendingLabel = labelDraft.trim();
+    const submittedLabels = pendingLabel
+      ? customLabels.some(
+          (existing) => existing.toLowerCase() === pendingLabel.toLowerCase(),
+        )
+        ? customLabels
+        : [...customLabels, pendingLabel]
+      : customLabels;
+
     const payload = {
       instrument: String(formData.get('instrument') ?? '').trim(),
       amount: Number(formData.get('amount')),
@@ -38,6 +83,7 @@ export function AddInvestmentForm({ labels, defaultDate }: AddInvestmentFormProp
       purchaseDate: String(formData.get('purchaseDate') ?? ''),
       category,
       labelIds,
+      labels: submittedLabels,
       ...(notes && { notes }),
     };
 
@@ -151,8 +197,41 @@ export function AddInvestmentForm({ labels, defaultDate }: AddInvestmentFormProp
         )}
       </div>
 
+      <div>
+        <label htmlFor="custom-labels" className="block text-sm font-medium mb-1">
+          Labels
+        </label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {customLabels.map((label) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+            >
+              {label}
+              <button
+                type="button"
+                aria-label={`Remove ${label}`}
+                onClick={() => removeLabel(label)}
+                className="text-blue-800 hover:text-blue-900"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <input
+          id="custom-labels"
+          type="text"
+          value={labelDraft}
+          onChange={handleLabelChange}
+          onKeyDown={handleLabelKeyDown}
+          placeholder="Add a label and press Enter or comma"
+          className="w-full border border-gray-300 rounded px-3 py-2"
+        />
+      </div>
+
       <fieldset>
-        <legend className="block text-sm font-medium mb-1">Labels</legend>
+        <legend className="block text-sm font-medium mb-1">Label presets</legend>
         <div className="space-y-1">
           {labels.length === 0 && (
             <p className="text-sm text-gray-500">No labels available.</p>

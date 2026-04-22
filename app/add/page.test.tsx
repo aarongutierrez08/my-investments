@@ -164,4 +164,91 @@ describe('AddPage', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.category).toBe('Crypto');
   });
+
+  describe('custom labels (free-text chips)', () => {
+    function getLabelsInput(): HTMLInputElement {
+      return screen.getByPlaceholderText(/add a label/i) as HTMLInputElement;
+    }
+
+    it('renders a free-text labels input', async () => {
+      const Resolved = await AddPage();
+      render(Resolved);
+
+      expect(getLabelsInput()).toBeInTheDocument();
+    });
+
+    it('turns typed values into chips separated by Enter or comma', async () => {
+      const Resolved = await AddPage();
+      render(Resolved);
+
+      const input = getLabelsInput();
+
+      fireEvent.change(input, { target: { value: 'alpha' } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+      fireEvent.change(input, { target: { value: 'beta,' } });
+
+      expect(screen.getByText('alpha')).toBeInTheDocument();
+      expect(screen.getByText('beta')).toBeInTheDocument();
+    });
+
+    it('submits the chips as labels in the POST payload', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const Resolved = await AddPage();
+      render(Resolved);
+
+      fireEvent.change(screen.getByLabelText(/instrument/i), { target: { value: 'AAPL' } });
+      fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '10' } });
+      fireEvent.change(screen.getByLabelText(/price/i), { target: { value: '150' } });
+      fireEvent.change(screen.getByLabelText(/category/i), { target: { value: 'Stocks' } });
+
+      const input = getLabelsInput();
+      fireEvent.change(input, { target: { value: 'long-term' } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+      fireEvent.change(input, { target: { value: 'tech' } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.labels).toEqual(['long-term', 'tech']);
+    });
+
+    it('lets the user remove a chip before submitting', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const Resolved = await AddPage();
+      render(Resolved);
+
+      fireEvent.change(screen.getByLabelText(/instrument/i), { target: { value: 'AAPL' } });
+      fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '10' } });
+      fireEvent.change(screen.getByLabelText(/price/i), { target: { value: '150' } });
+      fireEvent.change(screen.getByLabelText(/category/i), { target: { value: 'Stocks' } });
+
+      const input = getLabelsInput();
+      fireEvent.change(input, { target: { value: 'to-remove' } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+      const removeButton = screen.getByRole('button', { name: /remove to-remove/i });
+      fireEvent.click(removeButton);
+
+      expect(screen.queryByText('to-remove')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.labels).toEqual([]);
+    });
+  });
 });

@@ -81,7 +81,7 @@ describe('PUT /api/investments/[id]', () => {
   };
 
   it('returns 200 and the updated investment on success', async () => {
-    const updated: Investment = { id: 'inv-001', ...validPayload };
+    const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
     (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
@@ -164,6 +164,7 @@ describe('PUT /api/investments/[id]', () => {
   it('updates the category when a valid one is provided', async () => {
     const updated: Investment = {
       id: 'inv-001',
+      labels: [],
       ...validPayload,
       category: 'Crypto',
     };
@@ -195,7 +196,7 @@ describe('PUT /api/investments/[id]', () => {
   });
 
   it('ignores a client-provided id in the payload', async () => {
-    const updated: Investment = { id: 'inv-001', ...validPayload };
+    const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
     (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     await PUT(

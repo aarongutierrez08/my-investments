@@ -40,6 +40,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [uuidv4()],
+      labels: [],
       notes: 'Initial purchase',
     };
 
@@ -59,6 +60,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
       notes: 'Initial GOOG purchase',
     };
     await storage.addInvestment(initialInvestment);
@@ -86,6 +88,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
     };
     await storage.addInvestment(initial);
 
@@ -114,6 +117,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
     };
     await storage.addInvestment(initial);
 
@@ -141,6 +145,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
       notes: 'Investment to be removed',
     };
     const investmentToKeep: Investment = {
@@ -151,6 +156,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
       notes: 'Investment to keep',
     };
 
@@ -176,6 +182,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
       notes: 'To be deleted',
     };
     const investmentToKeep: Investment = {
@@ -186,6 +193,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
       notes: 'Keeper',
     };
 
@@ -208,6 +216,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
     };
     await storage.addInvestment(existing);
 
@@ -227,6 +236,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
     };
     const b: Investment = {
       id: uuidv4(),
@@ -236,6 +246,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
     };
     const c: Investment = {
       id: uuidv4(),
@@ -245,6 +256,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
     };
 
     await storage.addInvestment(a);
@@ -294,6 +306,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Crypto',
       labelIds: [labelToRemove.id, labelToKeep.id],
+      labels: [],
       notes: 'Crypto investment',
     };
     const investment2: Investment = {
@@ -304,6 +317,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Crypto',
       labelIds: [labelToRemove.id],
+      labels: [],
       notes: 'Another crypto investment',
     };
     const investment3: Investment = {
@@ -314,6 +328,7 @@ describe('Storage Module', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Stocks',
       labelIds: [],
+      labels: [],
       notes: 'ETF investment',
     };
     await storage.addInvestment(investment1);
@@ -360,7 +375,51 @@ describe('Storage Module', () => {
       expect(portfolio.investments[0]).toEqual({
         ...legacyRecord,
         category: 'Other',
+        labels: [],
       });
+    });
+
+    it('backfills labels to an empty array for legacy records without labels', async () => {
+      const legacyRecord = {
+        id: 'inv-legacy-2',
+        instrument: 'LEGACY',
+        amount: 1,
+        price: 10,
+        purchaseDate: '2026-01-01',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      await fs.writeFile(
+        TEST_DATA_FILE,
+        JSON.stringify({ investments: [legacyRecord], labels: [] }, null, 2),
+        'utf-8',
+      );
+
+      const portfolio = await storage.readAll();
+
+      expect(portfolio.investments[0].labels).toEqual([]);
+    });
+
+    it('preserves an explicit labels array from disk', async () => {
+      const record = {
+        id: 'inv-modern',
+        instrument: 'AAPL',
+        amount: 1,
+        price: 100,
+        purchaseDate: '2026-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['long-term', 'tech'],
+      };
+      await fs.writeFile(
+        TEST_DATA_FILE,
+        JSON.stringify({ investments: [record], labels: [] }, null, 2),
+        'utf-8',
+      );
+
+      const portfolio = await storage.readAll();
+
+      expect(portfolio.investments[0].labels).toEqual(['long-term', 'tech']);
     });
 
     it('does not rewrite the file when backfilling missing categories on read', async () => {
