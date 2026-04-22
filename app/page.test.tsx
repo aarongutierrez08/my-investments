@@ -27,6 +27,21 @@ describe('HomePage', () => {
     expect(await screen.findByText('No investments yet. Add your first one.')).toBeInTheDocument();
   });
 
+  it('renders an "Add investment" link that points to /add', async () => {
+    (storage.readAll as vi.Mock).mockResolvedValue({
+      investments: [],
+      categories: [],
+      labels: [],
+    });
+
+    const ResolvedHomePage = await HomePage();
+    render(ResolvedHomePage);
+
+    const link = screen.getByRole('link', { name: /add investment/i }) as HTMLAnchorElement;
+    expect(link).toBeInTheDocument();
+    expect(link.getAttribute('href')).toBe('/add');
+  });
+
   it('AC-002, AC-003, AC-004, AC-005: displays investments in a table with correct details', async () => {
     // Define mock data
     const mockCategory1 = { id: 'cat1', name: 'Stocks', color: '#FF0000' };

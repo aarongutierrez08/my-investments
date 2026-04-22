@@ -1,0 +1,76 @@
+{
+  "investments": [
+    {
+      "id": "inv-001",
+      "instrument": "AAPL",
+      "amount": 10,
+      "price": 175.50,
+      "purchaseDate": "2026-01-15",
+      "categoryId": "cat-stocks",
+      "labelIds": ["lbl-longterm"],
+      "notes": "Initial position after Q4 earnings"
+    },
+    {
+      "id": "inv-002",
+      "instrument": "MSFT",
+      "amount": 5,
+      "price": 410.20,
+      "purchaseDate": "2026-02-03",
+      "categoryId": "cat-stocks",
+      "labelIds": ["lbl-longterm", "lbl-dividend"],
+      "notes": ""
+    },
+    {
+      "id": "inv-003",
+      "instrument": "BTC",
+      "amount": 0.05,
+      "price": 62000,
+      "purchaseDate": "2026-02-10",
+      "categoryId": "cat-crypto",
+      "labelIds": ["lbl-highrisk", "lbl-longterm"],
+      "notes": "DCA entry"
+    },
+    {
+      "id": "inv-004",
+      "instrument": "ETH",
+      "amount": 1.2,
+      "price": 3200,
+      "purchaseDate": "2026-03-05",
+      "categoryId": "cat-crypto",
+      "labelIds": ["lbl-highrisk"],
+      "notes": ""
+    },
+    {
+      "id": "inv-005",
+      "instrument": "VOO",
+      "amount": 8,
+      "price": 495.75,
+      "purchaseDate": "2026-03-22",
+      "categoryId": "cat-etf",
+      "labelIds": ["lbl-longterm", "lbl-dividend"],
+      "notes": "S&P 500 tracker — core position"
+    },
+    {
+      "id": "inv-006",
+      "instrument": "AL30",
+      "amount": 100,
+      "price": 52.30,
+      "purchaseDate": "2026-04-01",
+      "categoryId": "cat-bonds",
+      "labelIds": ["lbl-shortterm"],
+      "notes": "Argentine sovereign bond"
+    }
+  ],
+  "categories": [
+    { "id": "cat-stocks", "name": "Stocks", "color": "#3b82f6" },
+    { "id": "cat-crypto", "name": "Crypto", "color": "#f59e0b" },
+    { "id": "cat-etf", "name": "ETFs", "color": "#8b5cf6" },
+    { "id": "cat-bonds", "name": "Bonds", "color": "#10b981" }
+  ],
+  "labels": [
+    { "id": "lbl-longterm", "name": "long-term", "color": "#059669" },
+    { "id": "lbl-shortterm", "name": "short-term", "color": "#d97706" },
+    { "id": "lbl-highrisk", "name": "high-risk", "color": "#dc2626" },
+    { "id": "lbl-dividend", "name": "dividend", "color": "#7c3aed" }
+  ]
+}
