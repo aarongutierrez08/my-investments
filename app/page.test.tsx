@@ -1033,6 +1033,91 @@ describe('HomePage', () => {
     });
   });
 
+  describe('purchase date sort direction toggle', () => {
+    const invOldDate = {
+      id: 'inv-old',
+      instrument: 'GOOG',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2022-03-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMidDate = {
+      id: 'inv-mid',
+      instrument: 'TSLA',
+      amount: 50,
+      price: 1,
+      purchaseDate: '2023-01-10',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invNewDate = {
+      id: 'inv-new',
+      instrument: 'AAPL',
+      amount: 5,
+      price: 1,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    function getDateSortButton() {
+      return screen.getByRole('button', { name: /sort by date/i });
+    }
+
+    beforeEach(() => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invOldDate, invNewDate, invMidDate],
+        labels: [],
+      });
+    });
+
+    it('AC-001: defaults to newest-first when the purchase date sort is activated (regression for #33)', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      fireEvent.click(getDateSortButton());
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'TSLA', 'GOOG']);
+      expect(getDateSortButton()).toHaveTextContent('↓');
+    });
+
+    it('AC-002: clicking the purchase date sort once more reverses the order to oldest-first', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      fireEvent.click(getDateSortButton());
+      fireEvent.click(getDateSortButton());
+
+      expect(visibleInstruments()).toEqual(['GOOG', 'TSLA', 'AAPL']);
+    });
+
+    it('AC-003: shows the ascending arrow indicator when toggled to oldest-first', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      fireEvent.click(getDateSortButton());
+      fireEvent.click(getDateSortButton());
+
+      expect(getDateSortButton()).toHaveTextContent('↑');
+    });
+  });
+
   describe('sort by name', () => {
     const invApple = {
       id: 'inv1',
