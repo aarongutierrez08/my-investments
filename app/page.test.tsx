@@ -214,6 +214,95 @@ describe('HomePage', () => {
     });
   });
 
+  describe('custom labels on investment rows', () => {
+    const labelGrowth = { id: 'lbl-growth', name: 'Growth', color: '#0000FF' };
+    const labelHighRisk = { id: 'lbl-high-risk', name: 'High Risk', color: '#FF0000' };
+
+    const invWithOneLabel = {
+      id: 'inv-with-one-label',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [labelGrowth.id],
+    };
+
+    const invWithoutLabels = {
+      id: 'inv-without-labels',
+      instrument: 'BTC',
+      amount: 1,
+      price: 30000,
+      purchaseDate: '2023-02-20',
+      category: 'Crypto',
+      labelIds: [],
+    };
+
+    const invWithOtherLabel = {
+      id: 'inv-with-other-label',
+      instrument: 'ETH',
+      amount: 2,
+      price: 2000,
+      purchaseDate: '2023-03-10',
+      category: 'Crypto',
+      labelIds: [labelHighRisk.id],
+    };
+
+    function findRowByInstrument(instrument: string) {
+      const rows = screen.getAllByRole('row');
+      return rows.find((row) =>
+        within(row).queryByRole('cell', { name: instrument }),
+      )!;
+    }
+
+    it('AC-001: renders a chip for each label attached to the investment', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithOneLabel],
+        labels: [labelGrowth, labelHighRisk],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('AAPL');
+      expect(within(row).getByText(labelGrowth.name)).toBeInTheDocument();
+    });
+
+    it('AC-002: renders no chip and no placeholder when labelIds is empty', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithoutLabels],
+        labels: [labelGrowth, labelHighRisk],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('BTC');
+      expect(within(row).queryByText(labelGrowth.name)).not.toBeInTheDocument();
+      expect(within(row).queryByText(labelHighRisk.name)).not.toBeInTheDocument();
+      expect(within(row).queryByText(/no labels/i)).not.toBeInTheDocument();
+    });
+
+    it('AC-003: each row shows only its own labels (no cross-row leakage)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithOneLabel, invWithOtherLabel],
+        labels: [labelGrowth, labelHighRisk],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const rowWithGrowth = findRowByInstrument('AAPL');
+      const rowWithHighRisk = findRowByInstrument('ETH');
+
+      expect(within(rowWithGrowth).getByText(labelGrowth.name)).toBeInTheDocument();
+      expect(within(rowWithGrowth).queryByText(labelHighRisk.name)).not.toBeInTheDocument();
+
+      expect(within(rowWithHighRisk).getByText(labelHighRisk.name)).toBeInTheDocument();
+      expect(within(rowWithHighRisk).queryByText(labelGrowth.name)).not.toBeInTheDocument();
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',
