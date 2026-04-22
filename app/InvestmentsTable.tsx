@@ -23,6 +23,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [nameSearch, setNameSearch] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
+  const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -75,11 +76,22 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       });
       return sorted;
     }
+    if (nameSortDirection !== null) {
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) => {
+        const comparison = a.instrument.localeCompare(b.instrument, undefined, {
+          sensitivity: 'base',
+        });
+        return nameSortDirection === 'asc' ? comparison : -comparison;
+      });
+      return sorted;
+    }
     return filteredInvestments;
-  }, [filteredInvestments, sortDirection, dateSortDirection]);
+  }, [filteredInvestments, sortDirection, dateSortDirection, nameSortDirection]);
 
   function cycleSortDirection() {
     setDateSortDirection(null);
+    setNameSortDirection(null);
     setSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -89,9 +101,20 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   function cycleDateSortDirection() {
     setSortDirection(null);
+    setNameSortDirection(null);
     setDateSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
+      return null;
+    });
+  }
+
+  function cycleNameSortDirection() {
+    setSortDirection(null);
+    setDateSortDirection(null);
+    setNameSortDirection((prev) => {
+      if (prev === null) return 'asc';
+      if (prev === 'asc') return 'desc';
       return null;
     });
   }
@@ -200,7 +223,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
           <thead className="bg-gray-800 text-white">
             <tr>
-              <th className="py-3 px-4 text-left">Instrument</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  nameSortDirection === 'asc'
+                    ? 'ascending'
+                    : nameSortDirection === 'desc'
+                      ? 'descending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleNameSortDirection}
+                  aria-label="Sort by name"
+                  className="inline-flex items-center gap-1"
+                >
+                  Instrument
+                  <span aria-hidden="true">
+                    {nameSortDirection === 'asc' && '↑'}
+                    {nameSortDirection === 'desc' && '↓'}
+                    {nameSortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th className="py-3 px-4 text-left">Category</th>
               <th
                 className="py-3 px-4 text-left"

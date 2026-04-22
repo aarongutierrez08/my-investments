@@ -1038,6 +1038,263 @@ describe('HomePage', () => {
     });
   });
 
+  describe('sort by name', () => {
+    const invApple = {
+      id: 'inv1',
+      instrument: 'Apple',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invBanana = {
+      id: 'inv2',
+      instrument: 'banana',
+      amount: 5,
+      price: 1,
+      purchaseDate: '2023-02-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invCherry = {
+      id: 'inv3',
+      instrument: 'cherry',
+      amount: 3,
+      price: 1,
+      purchaseDate: '2023-03-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    it('AC-001: exposes a "Sort by name" control alongside the existing sort controls', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invBanana, invCherry],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByRole('button', { name: /sort by amount/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sort by date/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sort by name/i })).toBeInTheDocument();
+    });
+
+    it('AC-002: sorts rows A–Z (case-insensitive) on first click', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invCherry, invApple, invBanana],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
+    });
+
+    it('AC-002: sorts rows Z–A on second click', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invBanana, invCherry],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+      fireEvent.click(sortNameButton);
+
+      expect(visibleInstruments()).toEqual(['cherry', 'banana', 'Apple']);
+    });
+
+    it('AC-003: uses locale-aware comparison so accented names sort naturally', async () => {
+      const invAvila = {
+        id: 'inv-avila',
+        instrument: 'Ávila',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invAlvarez = {
+        id: 'inv-alvarez',
+        instrument: 'Alvarez',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invBravo = {
+        id: 'inv-bravo',
+        instrument: 'Bravo',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-03',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invBravo, invAvila, invAlvarez],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      const instruments = visibleInstruments();
+      expect(instruments[2]).toBe('Bravo');
+      expect(instruments.slice(0, 2).sort()).toEqual(['Alvarez', 'Ávila'].sort());
+      expect(instruments.indexOf('Bravo')).toBeGreaterThan(instruments.indexOf('Alvarez'));
+      expect(instruments.indexOf('Bravo')).toBeGreaterThan(instruments.indexOf('Ávila'));
+    });
+
+    it('AC-003: case-insensitive ordering places "Apple" and "ápple" adjacently', async () => {
+      const invApplePlain = {
+        id: 'inv-apple',
+        instrument: 'Apple',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invAppleAccented = {
+        id: 'inv-apple-accented',
+        instrument: 'ápple',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invZebra = {
+        id: 'inv-zebra',
+        instrument: 'Zebra',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-03',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZebra, invAppleAccented, invApplePlain],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      const instruments = visibleInstruments();
+      expect(instruments[2]).toBe('Zebra');
+      expect(instruments.slice(0, 2).sort()).toEqual(['Apple', 'ápple'].sort());
+    });
+
+    it('third click returns to insertion order', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invCherry, invApple, invBanana],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+      fireEvent.click(sortNameButton);
+      fireEvent.click(sortNameButton);
+
+      expect(visibleInstruments()).toEqual(['cherry', 'Apple', 'banana']);
+    });
+
+    it('name sort replaces an active amount sort (mutually exclusive)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invBanana, invCherry],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortAmountButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortAmountButton);
+      expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
+
+      fireEvent.click(sortNameButton);
+      expect(visibleInstruments()).toEqual(['cherry', 'banana', 'Apple']);
+    });
+
+    it('name sort replaces an active date sort (mutually exclusive)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invBanana, invCherry],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+      expect(visibleInstruments()).toEqual(['cherry', 'banana', 'Apple']);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
+    });
+
+    it('does not alter the default sort order before any name sort is applied', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invCherry, invApple, invBanana],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['cherry', 'Apple', 'banana']);
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',
