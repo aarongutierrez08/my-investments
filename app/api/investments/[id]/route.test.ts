@@ -239,6 +239,60 @@ describe('PUT /api/investments/[id]', () => {
     );
   });
 
+  it('updates the stored purchaseDate when a valid new date is provided', async () => {
+    const updated: Investment = {
+      id: 'inv-001',
+      labels: [],
+      ...validPayload,
+      purchaseDate: '2024-06-30',
+    };
+    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, purchaseDate: '2024-06-30' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(storage.updateInvestment).toHaveBeenCalledWith(
+      'inv-001',
+      expect.objectContaining({ purchaseDate: '2024-06-30' }),
+    );
+
+    const body = (await response.json()) as Investment;
+    expect(body.purchaseDate).toBe('2024-06-30');
+  });
+
+  it('returns 400 when purchaseDate is empty', async () => {
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, purchaseDate: '' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(400);
+    expect(storage.updateInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when purchaseDate is malformed', async () => {
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, purchaseDate: 'not-a-date' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(400);
+    expect(storage.updateInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when purchaseDate has impossible month/day values', async () => {
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, purchaseDate: '2025-13-40' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(400);
+    expect(storage.updateInvestment).not.toHaveBeenCalled();
+  });
+
   it('ignores a client-provided id in the payload', async () => {
     const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
     (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);

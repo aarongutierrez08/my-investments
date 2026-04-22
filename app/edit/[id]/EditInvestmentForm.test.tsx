@@ -50,6 +50,37 @@ describe('EditInvestmentForm', () => {
     expect(category.value).toBe('Stocks');
   });
 
+  it('pre-fills the purchase date input with the investment current value', () => {
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+    const purchaseDate = screen.getByLabelText(/purchase date/i) as HTMLInputElement;
+    expect(purchaseDate.value).toBe('2026-01-15');
+  });
+
+  it('sends the new purchase date when changed and submitted', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ...investment, purchaseDate: '2024-06-30' }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+    fireEvent.change(screen.getByLabelText(/purchase date/i), {
+      target: { value: '2024-06-30' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.purchaseDate).toBe('2024-06-30');
+  });
+
   it('submits a PUT /api/investments/<id> request with the edited payload', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ...investment, price: 175 }), { status: 200 }),
