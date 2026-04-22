@@ -185,6 +185,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
 
+  const filteredCount = filteredInvestments.length;
+  const countLabel = `Showing ${filteredCount} ${filteredCount === 1 ? 'investment' : 'investments'}`;
+
   const categoryBreakdown = useMemo(() => {
     const breakdown = new Map<string, number>();
     for (const investment of filteredInvestments) {
@@ -221,6 +224,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   if (investments.length === 0) {
     return (
       <>
+        <p className="mb-1 text-sm text-gray-600">{countLabel}</p>
         <p className="mb-4 text-lg font-semibold">
           {totalInvestedLabel}: ${totalInvested}
         </p>
@@ -236,6 +240,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           {error}
         </div>
       )}
+      <p className="mb-1 text-sm text-gray-600">{countLabel}</p>
       <p className="mb-4 text-lg font-semibold">
         {totalInvestedLabel}: ${totalInvested}
       </p>
