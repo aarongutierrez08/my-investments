@@ -1288,6 +1288,137 @@ describe('HomePage', () => {
     });
   });
 
+  describe('sort by category', () => {
+    const invStocks = {
+      id: 'inv-stocks',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invBonds = {
+      id: 'inv-bonds',
+      instrument: 'US10Y',
+      amount: 5,
+      price: 1,
+      purchaseDate: '2023-02-01',
+      category: 'Bonds',
+      labelIds: [],
+      labels: [],
+    };
+    const invCrypto = {
+      id: 'inv-crypto',
+      instrument: 'BTC',
+      amount: 1,
+      price: 1,
+      purchaseDate: '2023-03-01',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+    const invNoCategory = {
+      id: 'inv-no-cat',
+      instrument: 'MYSTERY',
+      amount: 2,
+      price: 1,
+      purchaseDate: '2023-04-01',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    it('AC-001: exposes a "Sort by category" control alongside the existing sort controls', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invBonds, invCrypto],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByRole('button', { name: /sort by category/i })).toBeInTheDocument();
+    });
+
+    it('AC-002: reorders rows by category name ascending (A→Z) when selected', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invBonds, invCrypto],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['US10Y', 'BTC', 'AAPL']);
+    });
+
+    it('AC-003: places uncategorized investments after all categorized ones', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invNoCategory, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['US10Y', 'AAPL', 'MYSTERY']);
+    });
+
+    it('preserves the relative order of investments that share the same category (stable sort)', async () => {
+      const invStocksA = { ...invStocks, id: 'stock-a', instrument: 'AFIRST' };
+      const invStocksB = { ...invStocks, id: 'stock-b', instrument: 'BSECOND' };
+      const invStocksC = { ...invStocks, id: 'stock-c', instrument: 'CTHIRD' };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocksA, invStocksB, invStocksC],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['AFIRST', 'BSECOND', 'CTHIRD']);
+    });
+
+    it('category sort replaces an active amount sort (mutually exclusive)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invBonds, invCrypto],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'US10Y', 'BTC']);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['US10Y', 'BTC', 'AAPL']);
+    });
+  });
+
   describe('default sort by amount descending', () => {
     function visibleInstruments() {
       const table = screen.queryByRole('table');
