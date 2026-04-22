@@ -23,6 +23,11 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     ? investments.filter((investment) => investment.category === categoryFilter)
     : investments;
 
+  const totalInvested = filteredInvestments.reduce(
+    (sum, investment) => sum + investment.amount,
+    0,
+  );
+
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this investment?')) {
       return;
@@ -47,6 +52,15 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     }
   }
 
+  if (investments.length === 0) {
+    return (
+      <>
+        <p className="mb-4 text-lg font-semibold">Total invested: ${totalInvested}</p>
+        <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
+      </>
+    );
+  }
+
   return (
     <>
       {error && (
@@ -54,6 +68,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           {error}
         </div>
       )}
+      <p className="mb-4 text-lg font-semibold">Total invested: ${totalInvested}</p>
       <div className="mb-4">
         <label htmlFor="category-filter" className="block text-sm font-medium mb-1">
           Filter by category

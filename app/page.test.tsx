@@ -303,6 +303,94 @@ describe('HomePage', () => {
     });
   });
 
+  describe('total invested summary', () => {
+    it('AC-001: shows "Total invested: $<sum>" above the table with the sum of all amounts', async () => {
+      const inv1 = {
+        id: 'i1',
+        instrument: 'A',
+        amount: 100,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      const inv2 = {
+        id: 'i2',
+        instrument: 'B',
+        amount: 250,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      const inv3 = {
+        id: 'i3',
+        instrument: 'C',
+        amount: 75,
+        price: 1,
+        purchaseDate: '2023-01-03',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Total invested: $425')).toBeInTheDocument();
+    });
+
+    it('AC-002: shows "Total invested: $0" when the investments list is empty', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Total invested: $0')).toBeInTheDocument();
+    });
+
+    it('AC-003: total reflects only the filtered-in investments when a category filter is active', async () => {
+      const stockInv = {
+        id: 'i1',
+        instrument: 'A',
+        amount: 100,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      const cryptoInv = {
+        id: 'i2',
+        instrument: 'B',
+        amount: 250,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Crypto',
+        labelIds: [],
+      };
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stockInv, cryptoInv],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Total invested: $350')).toBeInTheDocument();
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+
+      expect(screen.getByText('Total invested: $100')).toBeInTheDocument();
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',
