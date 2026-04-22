@@ -260,11 +260,13 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             Total by category
           </h2>
           <ul className="list-disc list-inside">
-            {Array.from(categoryBreakdown.entries()).map(([name, total]) => (
-              <li key={name}>
-                {name}: ${total}
-              </li>
-            ))}
+            {Array.from(categoryBreakdown.entries()).map(([name, total]) => {
+              const suffix =
+                totalInvested > 0
+                  ? ` (${Math.round((total / totalInvested) * 100)}%)`
+                  : '';
+              return <li key={name}>{`${name}: $${total}${suffix}`}</li>;
+            })}
           </ul>
         </section>
       )}
