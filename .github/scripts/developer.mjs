@@ -43,13 +43,14 @@ const DEVELOPER_PROMPT = `You are a senior developer agent. Your job is to imple
 ## Workflow
 
 You have access to tools. Follow this workflow:
-1. Use \`list_files\` and \`read_file\` to understand the project structure and relevant code.
-2. Use \`search_code\` to find related code, patterns, and conventions.
-3. Use \`write_file\` and \`edit_file\` to implement the feature/fix.
-4. Use \`run_command\` with \`npm test\` to verify your implementation passes all tests.
-5. If tests fail, read the errors, fix the code, and re-run tests.
-6. When all tests pass, call \`submit_pr\` to create the pull request.
-7. If you cannot complete the task, call \`ask_help\` explaining why.
+1. Use \`list_skills\` to see what specialized knowledge exists for this project. Then \`read_skill\` on any that look directly relevant to the task (e.g. framework-specific patterns, testing conventions). Skip skills that are clearly unrelated — do not load them all.
+2. Use \`list_files\` and \`read_file\` to understand the project structure and relevant code.
+3. Use \`search_code\` to find related code, patterns, and conventions.
+4. Use \`write_file\` and \`edit_file\` to implement the feature/fix.
+5. Use \`run_command\` with \`npm test\` to verify your implementation passes all tests.
+6. If tests fail, read the errors, fix the code, and re-run tests.
+7. When all tests pass, call \`submit_pr\` to create the pull request.
+8. If you cannot complete the task, call \`ask_help\` explaining why.
 
 You MUST always end by calling one of: submit_pr or ask_help.
 Do NOT call submit_pr until tests pass.
@@ -233,9 +234,84 @@ async function toolAskHelp(reason) {
   process.exit(1);
 }
 
+// ─── Skills (progressive disclosure) ────────────────────────────────────────
+
+const SKILL_DIRS = [".gemini/skills", ".agents/skills", ".claude/skills"];
+
+function parseFrontmatter(content) {
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
+  if (!match) return { meta: {}, body: content };
+  const meta = {};
+  for (const line of match[1].split("\n")) {
+    const m = line.match(/^(\w+):\s*(.*)$/);
+    if (m) meta[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  }
+  return { meta, body: match[2] };
+}
+
+function findSkillPath(skillName) {
+  for (const dir of SKILL_DIRS) {
+    const candidate = dir + "/" + skillName + "/SKILL.md";
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function listSkills() {
+  const skills = [];
+  const seen = new Set();
+  for (const dir of SKILL_DIRS) {
+    if (!existsSync(dir)) continue;
+    for (const entry of readdirSync(dir)) {
+      const skillPath = dir + "/" + entry + "/SKILL.md";
+      if (seen.has(entry)) continue;
+      if (!existsSync(skillPath)) continue;
+      try {
+        const content = readFileSync(skillPath, "utf-8");
+        const { meta } = parseFrontmatter(content);
+        skills.push({
+          name: meta.name || entry,
+          description: meta.description || "(no description)",
+        });
+        seen.add(entry);
+      } catch { /* skip malformed */ }
+    }
+  }
+  return skills;
+}
+
+function readSkill(skillName) {
+  const path = findSkillPath(skillName);
+  if (!path) return { error: `Skill not found: ${skillName}` };
+  const content = readFileSync(path, "utf-8");
+  const { body } = parseFrontmatter(content);
+  return body;
+}
+
 // ─── Tool declarations ──────────────────────────────────────────────────────
 
 const toolDeclarations = [
+  {
+    name: "list_skills",
+    description:
+      "List all available AI skills for this project (name + short description). " +
+      "Skills are specialized knowledge packs (framework conventions, testing patterns, etc.). " +
+      "Call this first to discover what expertise is available, then use read_skill to load only the ones relevant to your task.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "read_skill",
+    description:
+      "Load the full instructions of a specific skill by name. " +
+      "Only call this for skills you determined are relevant to the current task.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The skill name (as returned by list_skills)" },
+      },
+      required: ["name"],
+    },
+  },
   {
     name: "list_files",
     description: "List files and directories in a given directory to explore the project structure.",
@@ -345,6 +421,10 @@ const TERMINAL_TOOLS = new Set(["submit_pr", "ask_help"]);
 
 async function dispatchTool(name, args) {
   switch (name) {
+    case "list_skills":
+      return listSkills();
+    case "read_skill":
+      return readSkill(args.name);
     case "list_files":
       return toolListFiles(args.directory);
     case "read_file":
@@ -466,7 +546,7 @@ async function main() {
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   const chat = ai.chats.create({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-2.5-flash",
     config: {
       tools: [{ functionDeclarations: toolDeclarations }],
       systemInstruction: prompt,

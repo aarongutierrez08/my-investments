@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "fs";
+import { join } from "path";
 
 const {
   ISSUE_NUMBER, ISSUE_TITLE, ISSUE_BODY, LABELS,
@@ -52,11 +53,12 @@ Business rules, non-functional requirements, and any restrictions.
 ## Workflow
 
 You have access to tools. Use them in this order:
-1. Call \`search_issues\` to detect duplicates or related work.
-2. Call \`list_files\` and \`read_file\` if you need codebase context to refine accurately.
-3. If the issue is too vague, call \`ask_clarification\`.
-4. If the issue is too large, call \`split_issue\`.
-5. Otherwise, call \`finalize_refinement\` with the refined specification.
+1. Call \`list_skills\` to discover available specialized knowledge for this project. Then \`read_skill\` for any that look directly relevant to writing acceptance criteria for this issue.
+2. Call \`search_issues\` to detect duplicates or related work.
+3. Call \`list_files\` and \`read_file\` if you need codebase context to refine accurately.
+4. If the issue is too vague, call \`ask_clarification\`.
+5. If the issue is too large, call \`split_issue\`.
+6. Otherwise, call \`finalize_refinement\` with the refined specification.
 
 You MUST always end by calling one of: finalize_refinement, ask_clarification, or split_issue.
 `;
@@ -201,9 +203,84 @@ async function finalizeRefinement(refinedBody, type, size, relatedIssues, duplic
   });
 }
 
+// ─── Skills (progressive disclosure) ─────────────────────────────────────────
+
+const SKILL_DIRS = [".gemini/skills", ".agents/skills", ".claude/skills"];
+
+function parseFrontmatter(content) {
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
+  if (!match) return { meta: {}, body: content };
+  const meta = {};
+  for (const line of match[1].split("\n")) {
+    const m = line.match(/^(\w+):\s*(.*)$/);
+    if (m) meta[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  }
+  return { meta, body: match[2] };
+}
+
+function findSkillPath(skillName) {
+  for (const dir of SKILL_DIRS) {
+    const candidate = join(dir, skillName, "SKILL.md");
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function listSkills() {
+  const skills = [];
+  const seen = new Set();
+  for (const dir of SKILL_DIRS) {
+    if (!existsSync(dir)) continue;
+    for (const entry of readdirSync(dir)) {
+      const skillPath = join(dir, entry, "SKILL.md");
+      if (seen.has(entry)) continue;
+      if (!existsSync(skillPath)) continue;
+      try {
+        const content = readFileSync(skillPath, "utf-8");
+        const { meta } = parseFrontmatter(content);
+        skills.push({
+          name: meta.name || entry,
+          description: meta.description || "(no description)",
+        });
+        seen.add(entry);
+      } catch { /* skip malformed */ }
+    }
+  }
+  return skills;
+}
+
+function readSkill(skillName) {
+  const path = findSkillPath(skillName);
+  if (!path) return { error: `Skill not found: ${skillName}` };
+  const content = readFileSync(path, "utf-8");
+  const { body } = parseFrontmatter(content);
+  return body;
+}
+
 // ─── Tool declarations ───────────────────────────────────────────────────────
 
 const toolDeclarations = [
+  {
+    name: "list_skills",
+    description:
+      "List all available AI skills for this project (name + short description). " +
+      "Skills are specialized knowledge packs (framework conventions, testing patterns, etc.). " +
+      "Call this first to discover what expertise is available, then use read_skill to load only the ones relevant to your task.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "read_skill",
+    description:
+      "Load the full instructions of a specific skill by name. " +
+      "Only call this for skills you determined are relevant to the current task.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The skill name (as returned by list_skills)" },
+      },
+      required: ["name"],
+    },
+  },
   {
     name: "search_issues",
     description: "Search for existing issues to detect duplicates or related work before refining.",
@@ -319,6 +396,10 @@ const TERMINAL_TOOLS = new Set(["finalize_refinement", "ask_clarification", "spl
 
 async function dispatchTool(name, args) {
   switch (name) {
+    case "list_skills":
+      return listSkills();
+    case "read_skill":
+      return readSkill(args.name);
     case "search_issues":
       return searchIssues(args.query);
     case "read_file":
@@ -431,7 +512,7 @@ async function main() {
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
   const chat = ai.chats.create({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-2.5-flash",
     config: {
       tools: [{ functionDeclarations: toolDeclarations }],
       systemInstruction: systemPrompt,
