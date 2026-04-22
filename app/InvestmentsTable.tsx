@@ -3,19 +3,14 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Category, Investment, Label } from '../lib/types';
+import type { Investment, Label } from '../lib/types';
 
 interface InvestmentsTableProps {
   investments: Investment[];
-  categories: Category[];
   labels: Label[];
 }
 
-export function InvestmentsTable({
-  investments,
-  categories,
-  labels: labelsData,
-}: InvestmentsTableProps) {
+export function InvestmentsTable({ investments, labels: labelsData }: InvestmentsTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +63,6 @@ export function InvestmentsTable({
           </thead>
           <tbody className="text-gray-700">
             {investments.map((investment) => {
-              const category = categories.find((cat) => cat.id === investment.categoryId);
               const labels = investment.labelIds
                 .map((labelId) => labelsData.find((lbl) => lbl.id === labelId))
                 .filter((l): l is Label => l !== undefined);
@@ -78,17 +72,7 @@ export function InvestmentsTable({
               return (
                 <tr key={investment.id} className="border-b border-gray-200 hover:bg-gray-100">
                   <td className="py-3 px-4">{investment.instrument}</td>
-                  <td className="py-3 px-4">
-                    {category && (
-                      <span className="flex items-center">
-                        <span
-                          className="inline-block w-3 h-3 rounded-full mr-2"
-                          style={{ backgroundColor: category.color }}
-                        ></span>
-                        {category.name}
-                      </span>
-                    )}
-                  </td>
+                  <td className="py-3 px-4">{investment.category}</td>
                   <td className="py-3 px-4">{investment.amount}</td>
                   <td className="py-3 px-4">{investment.price.toFixed(2)}</td>
                   <td className="py-3 px-4">{investment.purchaseDate}</td>

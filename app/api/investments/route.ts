@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     amount: parsed.data.amount,
     price: parsed.data.price,
     purchaseDate: parsed.data.purchaseDate,
-    categoryId: parsed.data.categoryId,
+    category: parsed.data.category,
     labelIds: parsed.data.labelIds,
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
   };

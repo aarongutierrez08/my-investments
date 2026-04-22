@@ -22,7 +22,6 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-const mockCategory = { id: 'cat-stocks', name: 'Stocks', color: '#3b82f6' };
 const mockLabel = { id: 'lbl-longterm', name: 'long-term', color: '#059669' };
 const mockInvestment = {
   id: 'inv-001',
@@ -30,7 +29,7 @@ const mockInvestment = {
   amount: 10,
   price: 150,
   purchaseDate: '2026-01-15',
-  categoryId: mockCategory.id,
+  category: 'Stocks',
   labelIds: [mockLabel.id],
   notes: 'Initial position',
 };
@@ -40,7 +39,6 @@ describe('EditPage', () => {
     vi.clearAllMocks();
     (storage.readAll as unknown as vi.Mock).mockResolvedValue({
       investments: [mockInvestment],
-      categories: [mockCategory],
       labels: [mockLabel],
     });
   });
@@ -62,7 +60,7 @@ describe('EditPage', () => {
     expect(purchaseDate.defaultValue).toBe('2026-01-15');
 
     const category = screen.getByLabelText(/category/i) as HTMLSelectElement;
-    expect(category.value).toBe('cat-stocks');
+    expect(category.value).toBe('Stocks');
 
     const longterm = screen.getByLabelText(/long-term/i) as HTMLInputElement;
     expect(longterm.defaultChecked).toBe(true);

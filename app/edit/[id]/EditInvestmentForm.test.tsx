@@ -14,11 +14,6 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-const categories = [
-  { id: 'cat-stocks', name: 'Stocks', color: '#3b82f6' },
-  { id: 'cat-crypto', name: 'Crypto', color: '#f59e0b' },
-];
-
 const labels = [
   { id: 'lbl-longterm', name: 'long-term', color: '#059669' },
   { id: 'lbl-highrisk', name: 'high-risk', color: '#dc2626' },
@@ -30,7 +25,7 @@ const investment: Investment = {
   amount: 10,
   price: 150,
   purchaseDate: '2026-01-15',
-  categoryId: 'cat-stocks',
+  category: 'Stocks',
   labelIds: ['lbl-longterm'],
   notes: 'Initial position',
 };
@@ -47,19 +42,20 @@ describe('EditInvestmentForm', () => {
     vi.restoreAllMocks();
   });
 
+  it('pre-selects the investment current category', () => {
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+    const category = screen.getByLabelText(/category/i) as HTMLSelectElement;
+    expect(category.value).toBe('Stocks');
+  });
+
   it('submits a PUT /api/investments/<id> request with the edited payload', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ...investment, price: 175 }), { status: 200 }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(
-      <EditInvestmentForm
-        investment={investment}
-        categories={categories}
-        labels={labels}
-      />,
-    );
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
 
     const price = screen.getByLabelText(/price/i) as HTMLInputElement;
     fireEvent.change(price, { target: { value: '175' } });
@@ -86,7 +82,7 @@ describe('EditInvestmentForm', () => {
       amount: 10,
       price: 175,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
       labelIds: ['lbl-longterm'],
       notes: 'Initial position',
     });
@@ -96,19 +92,33 @@ describe('EditInvestmentForm', () => {
     });
   });
 
+  it('sends the new category when changed and submitted', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ...investment, category: 'Crypto' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+    fireEvent.change(screen.getByLabelText(/category/i), { target: { value: 'Crypto' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.category).toBe('Crypto');
+  });
+
   it('shows an inline error message when the server returns an error', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: 'something broke' }), { status: 500 }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(
-      <EditInvestmentForm
-        investment={investment}
-        categories={categories}
-        labels={labels}
-      />,
-    );
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
 
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 

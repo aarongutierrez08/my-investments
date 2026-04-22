@@ -75,7 +75,7 @@ describe('PUT /api/investments/[id]', () => {
     amount: 12,
     price: 155,
     purchaseDate: '2026-01-15',
-    categoryId: 'cat-stocks',
+    category: 'Stocks' as const,
     labelIds: ['lbl-longterm'],
     notes: 'Updated position',
   };
@@ -115,7 +115,7 @@ describe('PUT /api/investments/[id]', () => {
       // amount missing
       price: 150,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
     };
 
     const response = await PUT(
@@ -137,6 +137,48 @@ describe('PUT /api/investments/[id]', () => {
 
     expect(response.status).toBe(400);
     expect(storage.updateInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when category is missing', async () => {
+    const { category: _omit, ...withoutCategory } = validPayload;
+
+    const response = await PUT(
+      makePutRequest('inv-001', withoutCategory),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(400);
+    expect(storage.updateInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when category is not in CATEGORIES', async () => {
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, category: 'NotACategory' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(400);
+    expect(storage.updateInvestment).not.toHaveBeenCalled();
+  });
+
+  it('updates the category when a valid one is provided', async () => {
+    const updated: Investment = {
+      id: 'inv-001',
+      ...validPayload,
+      category: 'Crypto',
+    };
+    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, category: 'Crypto' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(storage.updateInvestment).toHaveBeenCalledWith(
+      'inv-001',
+      expect.objectContaining({ category: 'Crypto' }),
+    );
   });
 
   it('returns 400 when the body is not valid JSON', async () => {
