@@ -1631,6 +1631,115 @@ describe('HomePage', () => {
     });
   });
 
+  describe('purchase date column', () => {
+    function findRowByInstrument(instrument: string) {
+      const rows = screen.getAllByRole('row');
+      return rows.find((row) =>
+        within(row).queryByRole('cell', { name: instrument }),
+      )!;
+    }
+
+    it('AC-001: shows the purchase date in each row that has one', async () => {
+      const investment = {
+        id: 'inv-dated',
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-03-14',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('AAPL');
+      expect(within(row).getByRole('cell', { name: '2026-03-14' })).toBeInTheDocument();
+    });
+
+    it('AC-002: shows a — placeholder when an investment has no purchase date', async () => {
+      const legacyInvestment = {
+        id: 'inv-legacy',
+        instrument: 'LEGACY',
+        amount: 1,
+        price: 1,
+        purchaseDate: '',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [legacyInvestment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('LEGACY');
+      expect(within(row).getByRole('cell', { name: '—' })).toBeInTheDocument();
+      expect(within(row).queryByText(/invalid date/i)).not.toBeInTheDocument();
+    });
+
+    it('AC-003: each row shows its own purchase date, not a shared one', async () => {
+      const invA = {
+        id: 'inv-a',
+        instrument: 'AAA',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2026-01-10',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invB = {
+        id: 'inv-b',
+        instrument: 'BBB',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2026-02-20',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invC = {
+        id: 'inv-c',
+        instrument: 'CCC',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2026-03-30',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invA, invB, invC],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        within(findRowByInstrument('AAA')).getByRole('cell', { name: '2026-01-10' }),
+      ).toBeInTheDocument();
+      expect(
+        within(findRowByInstrument('BBB')).getByRole('cell', { name: '2026-02-20' }),
+      ).toBeInTheDocument();
+      expect(
+        within(findRowByInstrument('CCC')).getByRole('cell', { name: '2026-03-30' }),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('delete investment', () => {
     const mockInvestment1 = {
       id: 'inv1',

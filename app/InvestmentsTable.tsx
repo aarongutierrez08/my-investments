@@ -389,7 +389,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                   <td className="py-3 px-4">{investment.category}</td>
                   <td className="py-3 px-4">{investment.amount}</td>
                   <td className="py-3 px-4">{investment.price.toFixed(2)}</td>
-                  <td className="py-3 px-4">{investment.purchaseDate}</td>
+                  <td className="py-3 px-4">{investment.purchaseDate || '—'}</td>
                   <td className="py-3 px-4">
                     {labels.map((label) => (
                       <span
