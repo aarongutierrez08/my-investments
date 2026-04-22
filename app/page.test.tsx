@@ -857,22 +857,18 @@ describe('HomePage', () => {
       });
     });
 
-    it('AC-001: sorts rows from highest to lowest amount when descending sort is activated', async () => {
+    it('AC-001: sorts rows from highest to lowest amount by default', async () => {
       const Resolved = await HomePage();
       render(Resolved);
-
-      const sortButton = screen.getByRole('button', { name: /sort by amount/i });
-      fireEvent.click(sortButton);
 
       expect(visibleInstruments()).toEqual(['LARGE', 'MID', 'SMALL']);
     });
 
-    it('AC-002: toggling to ascending sorts from lowest to highest; a third toggle returns to insertion order', async () => {
+    it('AC-002: clicking once toggles to ascending; a second click returns to insertion order', async () => {
       const Resolved = await HomePage();
       render(Resolved);
 
       const sortButton = screen.getByRole('button', { name: /sort by amount/i });
-      fireEvent.click(sortButton);
       fireEvent.click(sortButton);
       expect(visibleInstruments()).toEqual(['SMALL', 'MID', 'LARGE']);
 
@@ -886,9 +882,6 @@ describe('HomePage', () => {
 
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
-
-      const sortButton = screen.getByRole('button', { name: /sort by amount/i });
-      fireEvent.click(sortButton);
 
       expect(visibleInstruments()).toEqual(['LARGE', 'SMALL']);
     });
@@ -1031,10 +1024,12 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
+      expect(visibleInstruments()).toEqual(['TSLA', 'GOOG', 'AAPL']);
+
       const sortAmountButton = screen.getByRole('button', { name: /sort by amount/i });
       fireEvent.click(sortAmountButton);
 
-      expect(visibleInstruments()).toEqual(['TSLA', 'GOOG', 'AAPL']);
+      expect(visibleInstruments()).toEqual(['AAPL', 'GOOG', 'TSLA']);
     });
   });
 
@@ -1241,7 +1236,7 @@ describe('HomePage', () => {
       expect(visibleInstruments()).toEqual(['cherry', 'Apple', 'banana']);
     });
 
-    it('name sort replaces an active amount sort (mutually exclusive)', async () => {
+    it('name sort replaces the default amount sort (mutually exclusive)', async () => {
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({
         investments: [invApple, invBanana, invCherry],
         labels: [],
@@ -1250,8 +1245,6 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const sortAmountButton = screen.getByRole('button', { name: /sort by amount/i });
-      fireEvent.click(sortAmountButton);
       expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
 
       const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
@@ -1282,7 +1275,7 @@ describe('HomePage', () => {
       expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
     });
 
-    it('does not alter the default sort order before any name sort is applied', async () => {
+    it('does not alter the default amount-desc sort order before any name sort is applied', async () => {
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({
         investments: [invCherry, invApple, invBanana],
         labels: [],
@@ -1291,7 +1284,134 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(visibleInstruments()).toEqual(['cherry', 'Apple', 'banana']);
+      expect(visibleInstruments()).toEqual(['Apple', 'banana', 'cherry']);
+    });
+  });
+
+  describe('default sort by amount descending', () => {
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    it('AC-001: renders investments ordered by amount descending on initial load', async () => {
+      const inv100 = {
+        id: 'inv-100',
+        instrument: 'SMALL',
+        amount: 100,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const inv500 = {
+        id: 'inv-500',
+        instrument: 'LARGE',
+        amount: 500,
+        price: 1,
+        purchaseDate: '2023-02-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const inv250 = {
+        id: 'inv-250',
+        instrument: 'MID',
+        amount: 250,
+        price: 1,
+        purchaseDate: '2023-03-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv100, inv500, inv250],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['LARGE', 'MID', 'SMALL']);
+    });
+
+    it('AC-002: user-selected sort by name overrides the default amount-desc order', async () => {
+      const inv100 = {
+        id: 'inv-100',
+        instrument: 'Zeta',
+        amount: 100,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const inv500 = {
+        id: 'inv-500',
+        instrument: 'Alpha',
+        amount: 500,
+        price: 1,
+        purchaseDate: '2023-02-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const inv250 = {
+        id: 'inv-250',
+        instrument: 'Mango',
+        amount: 250,
+        price: 1,
+        purchaseDate: '2023-03-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv100, inv500, inv250],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['Alpha', 'Mango', 'Zeta']);
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      expect(visibleInstruments()).toEqual(['Alpha', 'Mango', 'Zeta']);
+    });
+
+    it('AC-003: renders correctly when the portfolio contains a single investment', async () => {
+      const onlyInvestment = {
+        id: 'only',
+        instrument: 'ONLY',
+        amount: 42,
+        price: 10,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [onlyInvestment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['ONLY']);
     });
   });
 
