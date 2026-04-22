@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CATEGORIES, type Category, type Investment, type Label } from '../lib/types';
+import type { Category, Investment, Label } from '../lib/types';
 
 interface InvestmentsTableProps {
   investments: Investment[];
@@ -35,6 +35,16 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     for (const investment of investments) {
       for (const label of investment.labels ?? []) {
         unique.add(label);
+      }
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [investments]);
+
+  const availableCategories = useMemo(() => {
+    const unique = new Set<Category>();
+    for (const investment of investments) {
+      if (investment.category) {
+        unique.add(investment.category);
       }
     }
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
@@ -283,7 +293,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             className="border border-gray-300 rounded px-3 py-2"
           >
             <option value="">All categories</option>
-            {CATEGORIES.map((category) => (
+            {availableCategories.map((category) => (
               <option key={category} value={category}>
                 {category}
               </option>
