@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CATEGORIES, type Category, type Investment, type Label } from '../lib/types';
@@ -18,10 +18,29 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
+  const [labelFilter, setLabelFilter] = useState<string>('');
 
-  const filteredInvestments = categoryFilter
-    ? investments.filter((investment) => investment.category === categoryFilter)
-    : investments;
+  const availableLabels = useMemo(() => {
+    const unique = new Set<string>();
+    for (const investment of investments) {
+      for (const label of investment.labels ?? []) {
+        unique.add(label);
+      }
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [investments]);
+
+  const filteredInvestments = useMemo(() => {
+    return investments.filter((investment) => {
+      if (categoryFilter && investment.category !== categoryFilter) {
+        return false;
+      }
+      if (labelFilter && !(investment.labels ?? []).includes(labelFilter)) {
+        return false;
+      }
+      return true;
+    });
+  }, [investments, categoryFilter, labelFilter]);
 
   const totalInvested = filteredInvestments.reduce(
     (sum, investment) => sum + investment.amount,
@@ -69,23 +88,43 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         </div>
       )}
       <p className="mb-4 text-lg font-semibold">Total invested: ${totalInvested}</p>
-      <div className="mb-4">
-        <label htmlFor="category-filter" className="block text-sm font-medium mb-1">
-          Filter by category
-        </label>
-        <select
-          id="category-filter"
-          value={categoryFilter}
-          onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
-          className="border border-gray-300 rounded px-3 py-2"
-        >
-          <option value="">All categories</option>
-          {CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
+      <div className="mb-4 flex flex-wrap gap-4">
+        <div>
+          <label htmlFor="category-filter" className="block text-sm font-medium mb-1">
+            Filter by category
+          </label>
+          <select
+            id="category-filter"
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value as CategoryFilter)}
+            className="border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="">All categories</option>
+            {CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="label-filter" className="block text-sm font-medium mb-1">
+            Filter by label
+          </label>
+          <select
+            id="label-filter"
+            value={labelFilter}
+            onChange={(event) => setLabelFilter(event.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="">All labels</option>
+            {availableLabels.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       {filteredInvestments.length === 0 ? (
         <p className="text-center text-gray-500">No investments in this category.</p>
