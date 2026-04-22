@@ -556,6 +556,133 @@ describe('HomePage', () => {
     });
   });
 
+  describe('search by name', () => {
+    const invApple = {
+      id: 'inv1',
+      instrument: 'Apple Inc',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMicrosoft = {
+      id: 'inv2',
+      instrument: 'Microsoft',
+      amount: 5,
+      price: 300,
+      purchaseDate: '2023-02-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invBitcoin = {
+      id: 'inv3',
+      instrument: 'Bitcoin',
+      amount: 1,
+      price: 30000,
+      purchaseDate: '2023-03-10',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    beforeEach(() => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invMicrosoft, invBitcoin],
+        labels: [],
+      });
+    });
+
+    it('AC-001: renders a search input with placeholder "Search by name..."', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name...');
+      expect(search).toBeInTheDocument();
+    });
+
+    it('AC-002: typing a substring leaves only the matching rows visible', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name...');
+      fireEvent.change(search, { target: { value: 'Apple' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('Apple Inc');
+      expect(instruments).not.toContain('Microsoft');
+      expect(instruments).not.toContain('Bitcoin');
+    });
+
+    it('AC-002: matches case-insensitively (typing "apple" matches "Apple Inc")', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name...');
+      fireEvent.change(search, { target: { value: 'apple' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['Apple Inc']);
+    });
+
+    it('AC-002: trims whitespace from the query before matching', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name...');
+      fireEvent.change(search, { target: { value: '  apple  ' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['Apple Inc']);
+    });
+
+    it('AC-003: composes with an active category filter (AND)', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const search = screen.getByPlaceholderText('Search by name...');
+      fireEvent.change(search, { target: { value: 'apple' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['Apple Inc']);
+    });
+
+    it('clearing the search restores the list to what other filters alone would show', async () => {
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const search = screen.getByPlaceholderText('Search by name...');
+      fireEvent.change(search, { target: { value: 'apple' } });
+      expect(visibleInstruments()).toEqual(['Apple Inc']);
+
+      fireEvent.change(search, { target: { value: '' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('Apple Inc');
+      expect(instruments).toContain('Microsoft');
+      expect(instruments).not.toContain('Bitcoin');
+    });
+  });
+
   describe('total by category breakdown', () => {
     it('AC-001: shows a row per category with the sum of investment amounts', async () => {
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({

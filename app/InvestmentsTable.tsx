@@ -19,6 +19,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
   const [labelFilter, setLabelFilter] = useState<string>('');
+  const [nameSearch, setNameSearch] = useState<string>('');
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -31,6 +32,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   }, [investments]);
 
   const filteredInvestments = useMemo(() => {
+    const trimmedSearch = nameSearch.trim().toLowerCase();
     return investments.filter((investment) => {
       if (categoryFilter && investment.category !== categoryFilter) {
         return false;
@@ -38,9 +40,12 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       if (labelFilter && !(investment.labels ?? []).includes(labelFilter)) {
         return false;
       }
+      if (trimmedSearch && !investment.instrument.toLowerCase().includes(trimmedSearch)) {
+        return false;
+      }
       return true;
     });
-  }, [investments, categoryFilter, labelFilter]);
+  }, [investments, categoryFilter, labelFilter, nameSearch]);
 
   const totalInvested = filteredInvestments.reduce(
     (sum, investment) => sum + investment.amount,
@@ -89,6 +94,19 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       )}
       <p className="mb-4 text-lg font-semibold">Total invested: ${totalInvested}</p>
       <div className="mb-4 flex flex-wrap gap-4">
+        <div>
+          <label htmlFor="name-search" className="block text-sm font-medium mb-1">
+            Search by name
+          </label>
+          <input
+            id="name-search"
+            type="text"
+            value={nameSearch}
+            onChange={(event) => setNameSearch(event.target.value)}
+            placeholder="Search by name..."
+            className="border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
         <div>
           <label htmlFor="category-filter" className="block text-sm font-medium mb-1">
             Filter by category
