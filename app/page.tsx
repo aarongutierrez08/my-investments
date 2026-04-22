@@ -17,11 +17,7 @@ export default async function HomePage() {
         </Link>
       </div>
 
-      {investments.length === 0 ? (
-        <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
-      ) : (
-        <InvestmentsTable investments={investments} labels={labels} />
-      )}
+      <InvestmentsTable investments={investments} labels={labels} />
     </main>
   );
 }
