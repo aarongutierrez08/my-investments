@@ -159,7 +159,7 @@ describe('HomePage', () => {
       expect(select).toBeInTheDocument();
     });
 
-    it('AC-005: dropdown options include "All categories" and every category', async () => {
+    it('AC-005: dropdown options include "All categories" and every category present in the data', async () => {
       const Resolved = await HomePage();
       render(Resolved);
 
@@ -169,10 +169,10 @@ describe('HomePage', () => {
       expect(optionValues).toContain('All categories');
       expect(optionValues).toContain('Stocks');
       expect(optionValues).toContain('Crypto');
-      expect(optionValues).toContain('Real Estate');
       expect(optionValues).toContain('Bonds');
-      expect(optionValues).toContain('Cash');
-      expect(optionValues).toContain('Other');
+      expect(optionValues).not.toContain('Real Estate');
+      expect(optionValues).not.toContain('Cash');
+      expect(optionValues).not.toContain('Other');
     });
 
     it('AC-002: shows only matching investments when a category is selected', async () => {
@@ -202,12 +202,15 @@ describe('HomePage', () => {
       expect(screen.getByRole('cell', { name: 'US10Y' })).toBeInTheDocument();
     });
 
-    it('AC-004: shows an empty-state message when no investments match the filter', async () => {
+    it('AC-004: shows an empty-state message when no investments match the active filters', async () => {
       const Resolved = await HomePage();
       render(Resolved);
 
       const select = screen.getByRole('combobox', { name: /filter by category/i });
-      fireEvent.change(select, { target: { value: 'Real Estate' } });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+
+      const search = screen.getByPlaceholderText('Search by name or label');
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
 
       expect(screen.getByText(/no investments in this category/i)).toBeInTheDocument();
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -2395,6 +2398,143 @@ describe('HomePage', () => {
 
       const alert = await screen.findByRole('alert');
       expect(alert).toHaveTextContent(/failed/i);
+    });
+  });
+
+  describe('issue #57: filter investments list by category', () => {
+    const stocksA = {
+      id: 'inv-a',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 100,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const stocksB = {
+      id: 'inv-b',
+      instrument: 'MSFT',
+      amount: 5,
+      price: 200,
+      purchaseDate: '2023-02-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const cryptoA = {
+      id: 'inv-c',
+      instrument: 'BTC',
+      amount: 1,
+      price: 30000,
+      purchaseDate: '2023-03-10',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) return [] as string[];
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map(
+        (row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '',
+      );
+    }
+
+    it('AC-001: picking a category narrows the rows, totals and count to that subset', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stocksA, stocksB, cryptoA],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Crypto' } });
+
+      expect(visibleInstruments()).toEqual(['BTC']);
+      expect(screen.getByText('Total invested (filtered): $1')).toBeInTheDocument();
+      expect(screen.getByText(/showing 1 investment/i)).toBeInTheDocument();
+    });
+
+    it('AC-002: selecting "All categories" restores the full list, totals and count', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stocksA, stocksB, cryptoA],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+      expect(visibleInstruments()).toEqual(['AAPL', 'MSFT']);
+
+      fireEvent.change(select, { target: { value: '' } });
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'MSFT', 'BTC']);
+      expect(screen.getByText('Total invested: $16')).toBeInTheDocument();
+      expect(screen.getByText(/showing 3 investments/i)).toBeInTheDocument();
+    });
+
+    it('AC-003: combining a search term and a category shows rows matching BOTH', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stocksA, stocksB, cryptoA],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+
+      const search = screen.getByPlaceholderText('Search by name or label');
+      fireEvent.change(search, { target: { value: 'AAPL' } });
+
+      expect(visibleInstruments()).toEqual(['AAPL']);
+    });
+
+    it('the dropdown only lists categories present in the loaded data, plus "All categories"', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [stocksA, cryptoA],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', {
+        name: /filter by category/i,
+      }) as HTMLSelectElement;
+      const optionValues = Array.from(select.options).map((o) => o.value);
+
+      expect(optionValues).toEqual(['', 'Crypto', 'Stocks']);
+    });
+
+    it('the dropdown still offers "All categories" when no investments are loaded', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            ...stocksA,
+            id: 'inv-empty-cat',
+            category: '' as unknown as 'Stocks',
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', {
+        name: /filter by category/i,
+      }) as HTMLSelectElement;
+      const optionValues = Array.from(select.options).map((o) => o.value);
+
+      expect(optionValues).toEqual(['']);
     });
   });
 });
