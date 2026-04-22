@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AddPage from './page';
 import { storage } from '../../lib/storage';
+import { CATEGORIES } from '../../lib/types';
 
 vi.mock('../../lib/storage', () => ({
   storage: {
@@ -10,10 +11,13 @@ vi.mock('../../lib/storage', () => ({
   },
 }));
 
+const pushMock = vi.fn();
+const refreshMock = vi.fn();
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
-    refresh: vi.fn(),
+    push: pushMock,
+    refresh: refreshMock,
   }),
 }));
 
@@ -22,17 +26,19 @@ const today = new Date().toISOString().slice(0, 10);
 describe('AddPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pushMock.mockClear();
+    refreshMock.mockClear();
     (storage.readAll as unknown as vi.Mock).mockResolvedValue({
       investments: [],
-      categories: [
-        { id: 'cat-stocks', name: 'Stocks', color: '#3b82f6' },
-        { id: 'cat-crypto', name: 'Crypto', color: '#f59e0b' },
-      ],
       labels: [
         { id: 'lbl-longterm', name: 'long-term', color: '#059669' },
         { id: 'lbl-highrisk', name: 'high-risk', color: '#dc2626' },
       ],
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders all form inputs with proper labels', async () => {
@@ -70,12 +76,27 @@ describe('AddPage', () => {
     expect(notes.tagName).toBe('TEXTAREA');
   });
 
-  it('lists existing categories as options', async () => {
+  it('renders all six predefined categories as options', async () => {
     const Resolved = await AddPage();
     render(Resolved);
 
-    expect(screen.getByRole('option', { name: /Stocks/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Crypto/i })).toBeInTheDocument();
+    for (const category of CATEGORIES) {
+      expect(screen.getByRole('option', { name: category })).toBeInTheDocument();
+    }
+  });
+
+  it('shows a disabled placeholder selected by default', async () => {
+    const Resolved = await AddPage();
+    render(Resolved);
+
+    const placeholder = screen.getByRole('option', {
+      name: /select a category/i,
+    }) as HTMLOptionElement;
+    expect(placeholder).toBeInTheDocument();
+    expect(placeholder.disabled).toBe(true);
+
+    const category = screen.getByLabelText(/category/i) as HTMLSelectElement;
+    expect(category.value).toBe('');
   });
 
   it('lists existing labels as checkboxes', async () => {
@@ -102,5 +123,45 @@ describe('AddPage', () => {
     const cancel = screen.getByRole('link', { name: /cancel/i }) as HTMLAnchorElement;
     expect(cancel).toBeInTheDocument();
     expect(cancel.getAttribute('href')).toBe('/');
+  });
+
+  it('shows a validation error when submitted without selecting a category', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const Resolved = await AddPage();
+    render(Resolved);
+
+    fireEvent.change(screen.getByLabelText(/instrument/i), { target: { value: 'AAPL' } });
+    fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/price/i), { target: { value: '150' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    const error = await screen.findByRole('alert');
+    expect(error).toHaveTextContent(/category is required/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('submits a POST with the selected category in the payload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const Resolved = await AddPage();
+    render(Resolved);
+
+    fireEvent.change(screen.getByLabelText(/instrument/i), { target: { value: 'AAPL' } });
+    fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/price/i), { target: { value: '150' } });
+    fireEvent.change(screen.getByLabelText(/category/i), { target: { value: 'Crypto' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.category).toBe('Crypto');
   });
 });

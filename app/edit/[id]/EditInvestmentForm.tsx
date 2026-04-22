@@ -3,37 +3,40 @@
 import { useState, useTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Category, Investment, Label } from '../../../lib/types';
+import { CATEGORIES, type Investment, type Label } from '../../../lib/types';
 
 interface EditInvestmentFormProps {
   investment: Investment;
-  categories: Category[];
   labels: Label[];
 }
 
-export function EditInvestmentForm({
-  investment,
-  categories,
-  labels,
-}: EditInvestmentFormProps) {
+export function EditInvestmentForm({ investment, labels }: EditInvestmentFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setCategoryError(null);
 
     const formData = new FormData(event.currentTarget);
     const labelIds = formData.getAll('labelIds').map(String);
     const notes = String(formData.get('notes') ?? '').trim();
+    const category = String(formData.get('category') ?? '');
+
+    if (!category) {
+      setCategoryError('Category is required');
+      return;
+    }
 
     const payload = {
       instrument: String(formData.get('instrument') ?? '').trim(),
       amount: Number(formData.get('amount')),
       price: Number(formData.get('price')),
       purchaseDate: String(formData.get('purchaseDate') ?? ''),
-      categoryId: String(formData.get('categoryId') ?? ''),
+      category,
       labelIds,
       ...(notes && { notes }),
     };
@@ -125,25 +128,30 @@ export function EditInvestmentForm({
       </div>
 
       <div>
-        <label htmlFor="categoryId" className="block text-sm font-medium mb-1">
+        <label htmlFor="category" className="block text-sm font-medium mb-1">
           Category
         </label>
         <select
-          id="categoryId"
-          name="categoryId"
+          id="category"
+          name="category"
           required
-          defaultValue={investment.categoryId}
+          defaultValue={investment.category}
           className="w-full border border-gray-300 rounded px-3 py-2"
         >
           <option value="" disabled>
-            Select a category
+            -- Select a category --
           </option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              ● {category.name}
+          {CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
             </option>
           ))}
         </select>
+        {categoryError && (
+          <p role="alert" className="text-sm text-red-700 mt-1">
+            {categoryError}
+          </p>
+        )}
       </div>
 
       <fieldset>

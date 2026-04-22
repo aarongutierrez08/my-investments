@@ -3,7 +3,7 @@ import { storage } from '../lib/storage';
 import { InvestmentsTable } from './InvestmentsTable';
 
 export default async function HomePage() {
-  const { investments, categories, labels } = await storage.readAll();
+  const { investments, labels } = await storage.readAll();
 
   return (
     <main className="container mx-auto p-4">
@@ -20,11 +20,7 @@ export default async function HomePage() {
       {investments.length === 0 ? (
         <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
       ) : (
-        <InvestmentsTable
-          investments={investments}
-          categories={categories}
-          labels={labels}
-        />
+        <InvestmentsTable investments={investments} labels={labels} />
       )}
     </main>
   );

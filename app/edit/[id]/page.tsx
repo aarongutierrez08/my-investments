@@ -8,7 +8,7 @@ interface EditPageProps {
 
 export default async function EditPage({ params }: EditPageProps) {
   const { id } = await params;
-  const { investments, categories, labels } = await storage.readAll();
+  const { investments, labels } = await storage.readAll();
   const investment = investments.find((inv) => inv.id === id);
 
   if (!investment) {
@@ -18,11 +18,7 @@ export default async function EditPage({ params }: EditPageProps) {
   return (
     <main className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Edit investment</h1>
-      <EditInvestmentForm
-        investment={investment}
-        categories={categories}
-        labels={labels}
-      />
+      <EditInvestmentForm investment={investment} labels={labels} />
     </main>
   );
 }

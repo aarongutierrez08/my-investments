@@ -31,7 +31,7 @@ describe('POST /api/investments', () => {
       amount: 10,
       price: 150,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
       labelIds: ['lbl-longterm'],
       notes: 'Initial position',
     };
@@ -44,7 +44,7 @@ describe('POST /api/investments', () => {
     expect(body.amount).toBe(10);
     expect(body.price).toBe(150);
     expect(body.purchaseDate).toBe('2026-01-15');
-    expect(body.categoryId).toBe('cat-stocks');
+    expect(body.category).toBe('Stocks');
     expect(body.labelIds).toEqual(['lbl-longterm']);
     expect(body.notes).toBe('Initial position');
     expect(body.id).toMatch(UUID_REGEX);
@@ -60,7 +60,7 @@ describe('POST /api/investments', () => {
       amount: 0.5,
       price: 60000,
       purchaseDate: '2026-02-01',
-      categoryId: 'cat-crypto',
+      category: 'Crypto',
       labelIds: [],
     };
 
@@ -78,7 +78,7 @@ describe('POST /api/investments', () => {
       // amount missing
       price: 150,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
     };
 
     const response = await POST(makeRequest(payload));
@@ -95,7 +95,7 @@ describe('POST /api/investments', () => {
       amount: -5,
       price: 150,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
       labelIds: [],
     };
 
@@ -113,7 +113,7 @@ describe('POST /api/investments', () => {
       amount: 5,
       price: 0,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
       labelIds: [],
     };
 
@@ -129,13 +129,48 @@ describe('POST /api/investments', () => {
       amount: 5,
       price: 100,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
       labelIds: [],
     };
 
     const response = await POST(makeRequest(payload));
 
     expect(response.status).toBe(400);
+    expect(storage.addInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when category is missing', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 5,
+      price: 100,
+      purchaseDate: '2026-01-15',
+      labelIds: [],
+    };
+
+    const response = await POST(makeRequest(payload));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toHaveProperty('error');
+    expect(storage.addInvestment).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when category is not in CATEGORIES', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 5,
+      price: 100,
+      purchaseDate: '2026-01-15',
+      category: 'NotARealCategory',
+      labelIds: [],
+    };
+
+    const response = await POST(makeRequest(payload));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toHaveProperty('error');
     expect(storage.addInvestment).not.toHaveBeenCalled();
   });
 
@@ -158,7 +193,7 @@ describe('POST /api/investments', () => {
       amount: 10,
       price: 150,
       purchaseDate: '2026-01-15',
-      categoryId: 'cat-stocks',
+      category: 'Stocks',
     };
 
     const response = await POST(makeRequest(payload));
