@@ -24,6 +24,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
+  const [categorySortDirection, setCategorySortDirection] = useState<SortDirection>(null);
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -86,12 +87,34 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       });
       return sorted;
     }
+    if (categorySortDirection !== null) {
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) => {
+        const aCategory = (a.category as string | undefined) ?? '';
+        const bCategory = (b.category as string | undefined) ?? '';
+        if (aCategory === '' && bCategory === '') return 0;
+        if (aCategory === '') return 1;
+        if (bCategory === '') return -1;
+        const comparison = aCategory.localeCompare(bCategory, undefined, {
+          sensitivity: 'base',
+        });
+        return categorySortDirection === 'asc' ? comparison : -comparison;
+      });
+      return sorted;
+    }
     return filteredInvestments;
-  }, [filteredInvestments, sortDirection, dateSortDirection, nameSortDirection]);
+  }, [
+    filteredInvestments,
+    sortDirection,
+    dateSortDirection,
+    nameSortDirection,
+    categorySortDirection,
+  ]);
 
   function cycleSortDirection() {
     setDateSortDirection(null);
     setNameSortDirection(null);
+    setCategorySortDirection(null);
     setSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -102,6 +125,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   function cycleDateSortDirection() {
     setSortDirection(null);
     setNameSortDirection(null);
+    setCategorySortDirection(null);
     setDateSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -112,7 +136,19 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   function cycleNameSortDirection() {
     setSortDirection(null);
     setDateSortDirection(null);
+    setCategorySortDirection(null);
     setNameSortDirection((prev) => {
+      if (prev === null) return 'asc';
+      if (prev === 'asc') return 'desc';
+      return null;
+    });
+  }
+
+  function cycleCategorySortDirection() {
+    setSortDirection(null);
+    setDateSortDirection(null);
+    setNameSortDirection(null);
+    setCategorySortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
       return null;
@@ -247,7 +283,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                   </span>
                 </button>
               </th>
-              <th className="py-3 px-4 text-left">Category</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  categorySortDirection === 'asc'
+                    ? 'ascending'
+                    : categorySortDirection === 'desc'
+                      ? 'descending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleCategorySortDirection}
+                  aria-label="Sort by category"
+                  className="inline-flex items-center gap-1"
+                >
+                  Category
+                  <span aria-hidden="true">
+                    {categorySortDirection === 'asc' && '↑'}
+                    {categorySortDirection === 'desc' && '↓'}
+                    {categorySortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th
                 className="py-3 px-4 text-left"
                 aria-sort={
