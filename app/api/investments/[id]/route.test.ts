@@ -195,6 +195,50 @@ describe('PUT /api/investments/[id]', () => {
     expect(storage.updateInvestment).not.toHaveBeenCalled();
   });
 
+  it('persists a new labels array on update', async () => {
+    const updated: Investment = {
+      id: 'inv-001',
+      ...validPayload,
+      labels: ['crypto', 'long-term'],
+    };
+    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, labels: ['crypto', 'long-term'] }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(storage.updateInvestment).toHaveBeenCalledWith(
+      'inv-001',
+      expect.objectContaining({ labels: ['crypto', 'long-term'] }),
+    );
+
+    const body = (await response.json()) as Investment;
+    expect(body.labels).toEqual(['crypto', 'long-term']);
+  });
+
+  it('trims whitespace and dedupes labels on update', async () => {
+    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue({
+      id: 'inv-001',
+      ...validPayload,
+      labels: ['crypto', 'long-term'],
+    });
+
+    await PUT(
+      makePutRequest('inv-001', {
+        ...validPayload,
+        labels: ['crypto', 'CRYPTO', '  long-term  '],
+      }),
+      makeContext('inv-001'),
+    );
+
+    expect(storage.updateInvestment).toHaveBeenCalledWith(
+      'inv-001',
+      expect.objectContaining({ labels: ['crypto', 'long-term'] }),
+    );
+  });
+
   it('ignores a client-provided id in the payload', async () => {
     const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
     (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);

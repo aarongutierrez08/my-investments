@@ -11,19 +11,9 @@
         "lbl-highrisk",
         "lbl-longterm"
       ],
-      "notes": "DCA entry"
-    },
-    {
-      "id": "inv-004",
-      "instrument": "ETH",
-      "amount": 1.2,
-      "price": 3200,
-      "purchaseDate": "2026-03-05",
-      "categoryId": "cat-crypto",
-      "labelIds": [
-        "lbl-highrisk"
-      ],
-      "notes": ""
+      "notes": "DCA entry",
+      "labels": [],
+      "category": "Other"
     },
     {
       "id": "inv-005",
@@ -36,7 +26,9 @@
         "lbl-longterm",
         "lbl-dividend"
       ],
-      "notes": "S&P 500 tracker — core position"
+      "notes": "S&P 500 tracker — core position",
+      "labels": [],
+      "category": "Other"
     },
     {
       "id": "inv-006",
@@ -48,29 +40,9 @@
       "labelIds": [
         "lbl-shortterm"
       ],
-      "notes": "Argentine sovereign bond"
-    }
-  ],
-  "categories": [
-    {
-      "id": "cat-stocks",
-      "name": "Stocks",
-      "color": "#3b82f6"
-    },
-    {
-      "id": "cat-crypto",
-      "name": "Crypto",
-      "color": "#f59e0b"
-    },
-    {
-      "id": "cat-etf",
-      "name": "ETFs",
-      "color": "#8b5cf6"
-    },
-    {
-      "id": "cat-bonds",
-      "name": "Bonds",
-      "color": "#10b981"
+      "notes": "Argentine sovereign bond",
+      "labels": [],
+      "category": "Other"
     }
   ],
   "labels": [

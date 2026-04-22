@@ -30,7 +30,7 @@ export const investmentSchema = z.object({
   labelIds: z.array(z.string()).default([]),
   labels: z
     .array(z.string(), { message: 'labels must be an array of strings' })
-    .default([])
-    .transform(sanitizeLabels),
+    .optional()
+    .transform((raw) => (raw === undefined ? undefined : sanitizeLabels(raw))),
   notes: z.string().optional(),
 });
