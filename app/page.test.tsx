@@ -1999,6 +1999,117 @@ describe('HomePage', () => {
 
       expect(visibleInstruments()).toEqual(['US10Y', 'BTC', 'AAPL']);
     });
+
+    it('#61 AC-001: reorders rows by category name descending (Z→A) on second click', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invBonds, invCrypto, invStocks],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'BTC', 'US10Y']);
+
+      const categoryHeader = sortCategoryButton.closest('th');
+      expect(categoryHeader?.getAttribute('aria-sort')).toBe('descending');
+    });
+
+    it('#61 AC-002: places uncategorized investments after all categorized ones when sorting Z→A', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invNoCategory, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'US10Y', 'MYSTERY']);
+    });
+
+    it('#61 AC-003: third click advances the toggle cycle to the unsorted state', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invBonds, invCrypto],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+      fireEvent.click(sortCategoryButton);
+      fireEvent.click(sortCategoryButton);
+
+      const categoryHeader = sortCategoryButton.closest('th');
+      expect(categoryHeader?.getAttribute('aria-sort')).toBe('none');
+      expect(visibleInstruments()).toEqual(['AAPL', 'US10Y', 'BTC']);
+    });
+
+    it('#61: preserves relative order of investments sharing the same category when sorting Z→A (stable sort)', async () => {
+      const invStocksA = { ...invStocks, id: 'stock-a', instrument: 'AFIRST' };
+      const invStocksB = { ...invStocks, id: 'stock-b', instrument: 'BSECOND' };
+      const invStocksC = { ...invStocks, id: 'stock-c', instrument: 'CTHIRD' };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocksA, invStocksB, invStocksC],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['AFIRST', 'BSECOND', 'CTHIRD']);
+    });
+
+    it('#61: uses locale-aware comparison so accented category names sort naturally when Z→A', async () => {
+      const invAmbar = {
+        id: 'inv-ambar',
+        instrument: 'AMB',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Ámbar',
+        labelIds: [],
+        labels: [],
+      };
+      const invZafiro = {
+        id: 'inv-zafiro',
+        instrument: 'ZAF',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Zafiro',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invAmbar, invZafiro],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortCategoryButton = screen.getByRole('button', { name: /sort by category/i });
+      fireEvent.click(sortCategoryButton);
+      fireEvent.click(sortCategoryButton);
+
+      expect(visibleInstruments()).toEqual(['ZAF', 'AMB']);
+    });
   });
 
   describe('default sort by amount descending', () => {
