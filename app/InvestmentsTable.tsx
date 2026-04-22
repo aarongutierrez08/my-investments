@@ -49,8 +49,14 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       if (labelFilter && !(investment.labels ?? []).includes(labelFilter)) {
         return false;
       }
-      if (trimmedSearch && !investment.instrument.toLowerCase().includes(trimmedSearch)) {
-        return false;
+      if (trimmedSearch) {
+        const nameMatches = investment.instrument.toLowerCase().includes(trimmedSearch);
+        const labelMatches = (investment.labels ?? []).some((label) =>
+          label.toLowerCase().includes(trimmedSearch),
+        );
+        if (!nameMatches && !labelMatches) {
+          return false;
+        }
       }
       if (fromDate || toDate) {
         const purchaseDate = investment.purchaseDate || '';
@@ -257,7 +263,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             type="text"
             value={nameSearch}
             onChange={(event) => setNameSearch(event.target.value)}
-            placeholder="Search by name..."
+            placeholder="Search by name or label"
             className="border border-gray-300 rounded px-3 py-2"
           />
         </div>

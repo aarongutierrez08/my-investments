@@ -714,11 +714,11 @@ describe('HomePage', () => {
       });
     });
 
-    it('AC-001: renders a search input with placeholder "Search by name..."', async () => {
+    it('AC-001: renders a search input with placeholder "Search by name or label"', async () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name...');
+      const search = screen.getByPlaceholderText('Search by name or label');
       expect(search).toBeInTheDocument();
     });
 
@@ -726,7 +726,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name...');
+      const search = screen.getByPlaceholderText('Search by name or label');
       fireEvent.change(search, { target: { value: 'Apple' } });
 
       const instruments = visibleInstruments();
@@ -739,7 +739,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name...');
+      const search = screen.getByPlaceholderText('Search by name or label');
       fireEvent.change(search, { target: { value: 'apple' } });
 
       const instruments = visibleInstruments();
@@ -750,7 +750,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name...');
+      const search = screen.getByPlaceholderText('Search by name or label');
       fireEvent.change(search, { target: { value: '  apple  ' } });
 
       const instruments = visibleInstruments();
@@ -764,7 +764,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name...');
+      const search = screen.getByPlaceholderText('Search by name or label');
       fireEvent.change(search, { target: { value: 'apple' } });
 
       const instruments = visibleInstruments();
@@ -778,7 +778,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name...');
+      const search = screen.getByPlaceholderText('Search by name or label');
       fireEvent.change(search, { target: { value: 'apple' } });
       expect(visibleInstruments()).toEqual(['Apple Inc']);
 
@@ -788,6 +788,127 @@ describe('HomePage', () => {
       expect(instruments).toContain('Apple Inc');
       expect(instruments).toContain('Microsoft');
       expect(instruments).not.toContain('Bitcoin');
+    });
+  });
+
+  describe('search by name or label', () => {
+    const invApple = {
+      id: 'inv1',
+      instrument: 'Apple',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invTesla = {
+      id: 'inv2',
+      instrument: 'Tesla',
+      amount: 2,
+      price: 200,
+      purchaseDate: '2023-02-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['tech'],
+    };
+    const invMeta = {
+      id: 'inv3',
+      instrument: 'Meta',
+      amount: 3,
+      price: 250,
+      purchaseDate: '2023-03-10',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['growth', 'US'],
+    };
+    const invBtc = {
+      id: 'inv4',
+      instrument: 'BTC',
+      amount: 1,
+      price: 30000,
+      purchaseDate: '2023-04-05',
+      category: 'Crypto',
+      labelIds: [],
+      labels: ['growth'],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const firstCell = within(row).getAllByRole('cell')[0];
+        const nameSpan = firstCell.querySelector('span');
+        return nameSpan?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('uses "Search by name or label" as the placeholder', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByPlaceholderText('Search by name or label')).toBeInTheDocument();
+    });
+
+    it('AC-001: typing a label text shows only rows whose labels match', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invTesla],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name or label');
+      fireEvent.change(search, { target: { value: 'tech' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('Tesla');
+      expect(instruments).not.toContain('Apple');
+    });
+
+    it('AC-002: matches label text case-insensitively', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invMeta],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name or label');
+      fireEvent.change(search, { target: { value: 'GROWTH' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('Meta');
+      expect(instruments).not.toContain('Apple');
+    });
+
+    it('AC-003: combines with an active category filter using AND (name OR label within category)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invApple, invMeta, invBtc],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const search = screen.getByPlaceholderText('Search by name or label');
+      fireEvent.change(search, { target: { value: 'growth' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['Meta']);
     });
   });
 
