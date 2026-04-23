@@ -310,6 +310,15 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const averageInvested =
     filteredInvestments.length === 0 ? 0 : totalCost / filteredInvestments.length;
 
+  const medianInvested = (() => {
+    if (filteredInvestments.length === 0) return 0;
+    const values = filteredInvestments
+      .map((investment) => investment.amount * investment.price)
+      .sort((a, b) => a - b);
+    const mid = Math.floor(values.length / 2);
+    return values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
+  })();
+
   const hasActiveFilters =
     categoryFilter !== '' ||
     labelFilter !== '' ||
@@ -332,6 +341,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
   const averageLabel = isFiltered ? 'Average (filtered)' : 'Average';
+  const medianLabel = isFiltered ? 'Median (filtered)' : 'Median';
 
   function clearFilters() {
     setCategoryFilter('');
@@ -425,6 +435,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         <p className="mb-4 text-lg font-semibold">
           {averageLabel}: ${averageInvested}
         </p>
+        <p className="mb-4 text-lg font-semibold">
+          {medianLabel}: ${medianInvested}
+        </p>
         <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
       </>
     );
@@ -443,6 +456,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       </p>
       <p className="mb-4 text-lg font-semibold">
         {averageLabel}: ${averageInvested}
+      </p>
+      <p className="mb-4 text-lg font-semibold">
+        {medianLabel}: ${medianInvested}
       </p>
       {categoryBreakdown.size > 0 && (
         <section aria-labelledby="total-by-category-heading" className="mb-6">
