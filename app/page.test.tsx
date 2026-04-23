@@ -3320,4 +3320,195 @@ describe('HomePage', () => {
       expect(instruments).toContain('CCC');
     });
   });
+
+  describe('issue #77: clear all active filters with a single button', () => {
+    const invStocks = {
+      id: 'inv-stocks',
+      instrument: 'AAPL',
+      amount: 100,
+      price: 1,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invCrypto = {
+      id: 'inv-crypto',
+      instrument: 'BTC',
+      amount: 500,
+      price: 1,
+      purchaseDate: '2023-02-15',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+    const invBonds = {
+      id: 'inv-bonds',
+      instrument: 'US10Y',
+      amount: 1000,
+      price: 1,
+      purchaseDate: '2023-03-15',
+      category: 'Bonds',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const firstCell = within(row).getAllByRole('cell')[0];
+        const nameSpan = firstCell.querySelector('span');
+        return nameSpan?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('AC-001: clicking "Clear filters" resets an active search term and restores all rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invCrypto, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name, label or notes') as HTMLInputElement;
+      fireEvent.change(search, { target: { value: 'AAPL' } });
+      expect(visibleInstruments()).toEqual(['AAPL']);
+
+      const clearButton = screen.getByRole('button', { name: /clear filters/i });
+      fireEvent.click(clearButton);
+
+      expect(search.value).toBe('');
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAPL');
+      expect(instruments).toContain('BTC');
+      expect(instruments).toContain('US10Y');
+    });
+
+    it('AC-001: clicking "Clear filters" resets a selected category filter and restores all rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invCrypto, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', {
+        name: /filter by category/i,
+      }) as HTMLSelectElement;
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+      expect(visibleInstruments()).toEqual(['AAPL']);
+
+      const clearButton = screen.getByRole('button', { name: /clear filters/i });
+      fireEvent.click(clearButton);
+
+      expect(categorySelect.value).toBe('');
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAPL');
+      expect(instruments).toContain('BTC');
+      expect(instruments).toContain('US10Y');
+    });
+
+    it('AC-001: clicking "Clear filters" resets every active filter (search, category, label, dates, amounts) in one go', async () => {
+      const invWithLabel = {
+        ...invStocks,
+        id: 'inv-labelled',
+        instrument: 'GOOG',
+        labels: ['growth'],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithLabel, invCrypto, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name, label or notes') as HTMLInputElement;
+      const categorySelect = screen.getByRole('combobox', {
+        name: /filter by category/i,
+      }) as HTMLSelectElement;
+      const labelSelect = screen.getByRole('combobox', {
+        name: /filter by label/i,
+      }) as HTMLSelectElement;
+      const fromInput = screen.getByLabelText('From') as HTMLInputElement;
+      const toInput = screen.getByLabelText('To') as HTMLInputElement;
+      const minInput = screen.getByLabelText('Min amount') as HTMLInputElement;
+      const maxInput = screen.getByLabelText('Max amount') as HTMLInputElement;
+
+      fireEvent.change(search, { target: { value: 'GOOG' } });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+      fireEvent.change(labelSelect, { target: { value: 'growth' } });
+      fireEvent.change(fromInput, { target: { value: '2023-01-01' } });
+      fireEvent.change(toInput, { target: { value: '2023-01-31' } });
+      fireEvent.change(minInput, { target: { value: '50' } });
+      fireEvent.change(maxInput, { target: { value: '200' } });
+
+      const clearButton = screen.getByRole('button', { name: /clear filters/i });
+      fireEvent.click(clearButton);
+
+      expect(search.value).toBe('');
+      expect(categorySelect.value).toBe('');
+      expect(labelSelect.value).toBe('');
+      expect(fromInput.value).toBe('');
+      expect(toInput.value).toBe('');
+      expect(minInput.value).toBe('');
+      expect(maxInput.value).toBe('');
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('GOOG');
+      expect(instruments).toContain('BTC');
+      expect(instruments).toContain('US10Y');
+    });
+
+    it('AC-002: the "Clear filters" button is not actionable when no filter is active', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invCrypto, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const clearButton = screen.queryByRole('button', { name: /clear filters/i });
+      if (clearButton) {
+        expect(clearButton).toBeDisabled();
+      } else {
+        expect(clearButton).toBeNull();
+      }
+    });
+
+    it('AC-003: clicking "Clear filters" preserves the current sort order', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks, invCrypto, invBonds],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortAmountButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortAmountButton);
+      const amountHeader = sortAmountButton.closest('th');
+      expect(amountHeader?.getAttribute('aria-sort')).toBe('ascending');
+
+      const categorySelect = screen.getByRole('combobox', {
+        name: /filter by category/i,
+      }) as HTMLSelectElement;
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+      expect(visibleInstruments()).toEqual(['AAPL']);
+
+      const clearButton = screen.getByRole('button', { name: /clear filters/i });
+      fireEvent.click(clearButton);
+
+      expect(amountHeader?.getAttribute('aria-sort')).toBe('ascending');
+      expect(visibleInstruments()).toEqual(['AAPL', 'BTC', 'US10Y']);
+    });
+  });
 });
