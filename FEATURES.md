@@ -15,6 +15,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can pick a category from a fixed list when creating an investment — `app/add/AddInvestmentForm.tsx`
 - Users can attach custom labels when creating an investment — `app/add/AddInvestmentForm.tsx`
 - Users can set a purchase date when creating an investment — `app/add/AddInvestmentForm.tsx`
+- Users can add free-form notes when creating an investment — `app/add/AddInvestmentForm.tsx`
 
 ## Edit
 
