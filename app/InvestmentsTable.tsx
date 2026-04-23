@@ -364,10 +364,14 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const countLabel = `Showing ${filteredCount} ${filteredCount === 1 ? 'investment' : 'investments'}`;
 
   const categoryBreakdown = useMemo(() => {
-    const breakdown = new Map<string, number>();
+    const breakdown = new Map<string, { total: number; count: number }>();
     for (const investment of filteredInvestments) {
       const key = (investment.category as string | undefined) || UNCATEGORIZED;
-      breakdown.set(key, (breakdown.get(key) ?? 0) + investment.amount);
+      const existing = breakdown.get(key) ?? { total: 0, count: 0 };
+      breakdown.set(key, {
+        total: existing.total + investment.amount,
+        count: existing.count + 1,
+      });
     }
     return breakdown;
   }, [filteredInvestments]);
@@ -484,12 +488,13 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             Total by category
           </h2>
           <ul className="list-disc list-inside">
-            {Array.from(categoryBreakdown.entries()).map(([name, total]) => {
-              const suffix =
+            {Array.from(categoryBreakdown.entries()).map(([name, { total, count }]) => {
+              const percentSuffix =
                 totalInvested > 0
                   ? ` (${Math.round((total / totalInvested) * 100)}%)`
                   : '';
-              return <li key={name}>{`${name}: $${total}${suffix}`}</li>;
+              const countSuffix = ` · ${count} ${count === 1 ? 'investment' : 'investments'}`;
+              return <li key={name}>{`${name}: $${total}${percentSuffix}${countSuffix}`}</li>;
             })}
           </ul>
         </section>

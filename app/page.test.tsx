@@ -1229,9 +1229,9 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(screen.getByText('Stocks: $12000 (40%)')).toBeInTheDocument();
-      expect(screen.getByText('Real Estate: $9000 (30%)')).toBeInTheDocument();
-      expect(screen.getByText('Cash: $9000 (30%)')).toBeInTheDocument();
+      expect(screen.getByText('Stocks: $12000 (40%) · 1 investment')).toBeInTheDocument();
+      expect(screen.getByText('Real Estate: $9000 (30%) · 1 investment')).toBeInTheDocument();
+      expect(screen.getByText('Cash: $9000 (30%) · 1 investment')).toBeInTheDocument();
     });
 
     it('AC-002: percentages recompute against the new filtered total when filters change', async () => {
@@ -1264,14 +1264,14 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(screen.getByText('Stocks: $300 (30%)')).toBeInTheDocument();
-      expect(screen.getByText('Crypto: $700 (70%)')).toBeInTheDocument();
+      expect(screen.getByText('Stocks: $300 (30%) · 1 investment')).toBeInTheDocument();
+      expect(screen.getByText('Crypto: $700 (70%) · 1 investment')).toBeInTheDocument();
 
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Crypto' } });
 
       expect(screen.queryByText(/^Stocks:/)).not.toBeInTheDocument();
-      expect(screen.getByText('Crypto: $700 (100%)')).toBeInTheDocument();
+      expect(screen.getByText('Crypto: $700 (100%) · 1 investment')).toBeInTheDocument();
     });
 
     it('AC-003: does not render a percentage when the filtered total is 0', async () => {
@@ -1301,6 +1301,168 @@ describe('HomePage', () => {
         screen.queryByRole('heading', { name: /total by category/i }),
       ).not.toBeInTheDocument();
       expect(screen.queryByText(/\(\d+%\)/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('issue #96: investment count per category', () => {
+    it('AC-001: each category row shows the count of investments belonging to that category', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 's2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 's3',
+            instrument: 'MSFT',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'c1',
+            instrument: 'BTC',
+            amount: 400,
+            price: 1,
+            purchaseDate: '2023-01-04',
+            category: 'Crypto',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'c2',
+            instrument: 'ETH',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-05',
+            category: 'Crypto',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'r1',
+            instrument: 'HOUSE',
+            amount: 500,
+            price: 1,
+            purchaseDate: '2023-01-06',
+            category: 'Real Estate',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText(/^Stocks: .*· 3 investments$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Crypto: .*· 2 investments$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Real Estate: .*· 1 investment$/)).toBeInTheDocument();
+    });
+
+    it('AC-002: uses singular wording when the category has exactly one investment', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText(/^Stocks: .*· 1 investment$/)).toBeInTheDocument();
+      expect(screen.queryByText(/^Stocks: .*· 1 investments$/)).not.toBeInTheDocument();
+    });
+
+    it('AC-003: counts reflect the currently active filter', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 's1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['long-term'],
+          },
+          {
+            id: 's2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['long-term'],
+          },
+          {
+            id: 's3',
+            instrument: 'TSLA',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['short-term'],
+          },
+          {
+            id: 'c1',
+            instrument: 'BTC',
+            amount: 400,
+            price: 1,
+            purchaseDate: '2023-01-04',
+            category: 'Crypto',
+            labelIds: [],
+            labels: ['long-term'],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText(/^Stocks: .*· 3 investments$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Crypto: .*· 1 investment$/)).toBeInTheDocument();
+
+      const labelSelect = screen.getByRole('combobox', { name: /filter by label/i });
+      fireEvent.change(labelSelect, { target: { value: 'long-term' } });
+
+      expect(screen.getByText(/^Stocks: .*· 2 investments$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Crypto: .*· 1 investment$/)).toBeInTheDocument();
+      expect(screen.queryByText(/^Stocks: .*· 3 investments$/)).not.toBeInTheDocument();
     });
   });
 
