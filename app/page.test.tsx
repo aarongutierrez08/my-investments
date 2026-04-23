@@ -4014,4 +4014,197 @@ describe('HomePage', () => {
       createElementSpy.mockRestore();
     });
   });
+
+  describe('totals by purchase year', () => {
+    it('AC-001: shows one row per year with the correct summed amount', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 150,
+            price: 1,
+            purchaseDate: '2023-05-10',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2024-02-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i3',
+            instrument: 'C',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2024-11-20',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /totals by year/i });
+      const section = heading.closest('section') as HTMLElement;
+      expect(section).not.toBeNull();
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0]).toHaveTextContent('2024: $500');
+      expect(items[1]).toHaveTextContent('2023: $150');
+    });
+
+    it('AC-002: per-year totals reflect only the filtered investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 150,
+            price: 1,
+            purchaseDate: '2023-05-10',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2024-02-01',
+            category: 'Crypto',
+            labelIds: [],
+          },
+          {
+            id: 'i3',
+            instrument: 'C',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2024-11-20',
+            category: 'Crypto',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+
+      const heading = screen.getByRole('heading', { name: /totals by year/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(1);
+      expect(items[0]).toHaveTextContent('2023: $150');
+      expect(within(section).queryByText(/2024/)).not.toBeInTheDocument();
+    });
+
+    it('AC-003: years appear in descending order (newest first)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 10,
+            price: 1,
+            purchaseDate: '2021-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 20,
+            price: 1,
+            purchaseDate: '2024-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i3',
+            instrument: 'C',
+            amount: 30,
+            price: 1,
+            purchaseDate: '2022-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i4',
+            instrument: 'D',
+            amount: 40,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /totals by year/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items.map((i) => i.textContent)).toEqual([
+        '2024: $20',
+        '2023: $40',
+        '2022: $30',
+        '2021: $10',
+      ]);
+    });
+
+    it('skips investments without a purchase date instead of grouping them as "Unknown"', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2024-01-01',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 999,
+            price: 1,
+            purchaseDate: '',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /totals by year/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(1);
+      expect(items[0]).toHaveTextContent('2024: $100');
+      expect(within(section).queryByText(/unknown/i)).not.toBeInTheDocument();
+    });
+  });
 });
