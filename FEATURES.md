@@ -1,0 +1,55 @@
+# FEATURES.md
+
+Authoritative ledger of capabilities already shipped. The Planner reads this to avoid proposing duplicates. The Developer appends a new line every time a user-visible capability ships.
+
+Format: `- <one-line capability from the user's perspective> — \`<primary file path>\``
+
+## Data model
+
+- Investment entity with instrument, amount, price, purchase date, category, labels and notes — `lib/types.ts`
+- JSON-file storage for investments and labels — `lib/storage.ts`
+
+## Create
+
+- Users can create an investment through a form — `app/add/AddInvestmentForm.tsx`
+- Users can pick a category from a fixed list when creating an investment — `app/add/AddInvestmentForm.tsx`
+- Users can attach custom labels when creating an investment — `app/add/AddInvestmentForm.tsx`
+- Users can set a purchase date when creating an investment — `app/add/AddInvestmentForm.tsx`
+
+## Edit
+
+- Users can edit an existing investment (name, amount, price) — `app/edit/[id]/EditInvestmentForm.tsx`
+- Users can edit the custom labels of an investment — `app/edit/[id]/EditInvestmentForm.tsx`
+- Users can edit the purchase date of an investment — `app/edit/[id]/EditInvestmentForm.tsx`
+- Users can change the category of an investment while editing — `app/edit/[id]/EditInvestmentForm.tsx`
+
+## Delete
+
+- Users can delete an investment from the list with a confirmation prompt — `app/InvestmentsTable.tsx`
+
+## List view
+
+- Home page shows all investments in a table — `app/InvestmentsTable.tsx`
+- List shows each investment's custom labels — `app/InvestmentsTable.tsx`
+- List shows each investment's purchase date — `app/InvestmentsTable.tsx`
+- List shows the total invested amount across all investments — `app/InvestmentsTable.tsx`
+- List shows total invested per category — `app/InvestmentsTable.tsx`
+- List shows each category's percentage of the total portfolio — `app/InvestmentsTable.tsx`
+- List shows total invested for the currently filtered view — `app/InvestmentsTable.tsx`
+- List shows how many investments match the current filter — `app/InvestmentsTable.tsx`
+
+## Filter
+
+- Users can filter the list by category — `app/InvestmentsTable.tsx`
+- Users can filter the list by custom label — `app/InvestmentsTable.tsx`
+- Users can search investments by name — `app/InvestmentsTable.tsx`
+- Users can filter investments by a purchase date range — `app/InvestmentsTable.tsx`
+- Users can filter by name OR label through a single unified search box — `app/InvestmentsTable.tsx`
+
+## Sort
+
+- Investments are sorted by purchase amount descending by default — `app/InvestmentsTable.tsx`
+- Users can sort the list by amount — `app/InvestmentsTable.tsx`
+- Users can sort the list by investment name — `app/InvestmentsTable.tsx`
+- Users can sort the list by category name (A→Z and Z→A) — `app/InvestmentsTable.tsx`
+- Users can sort the list by purchase date (newest first and oldest first) — `app/InvestmentsTable.tsx`
