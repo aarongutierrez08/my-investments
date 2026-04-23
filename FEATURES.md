@@ -60,3 +60,4 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can sort the list by investment name — `app/InvestmentsTable.tsx`
 - Users can sort the list by category name (A→Z and Z→A) — `app/InvestmentsTable.tsx`
 - Users can sort the list by purchase date (newest first and oldest first) — `app/InvestmentsTable.tsx`
+- Users can sort the list by custom label (A→Z and Z→A) — `app/InvestmentsTable.tsx`

@@ -2112,6 +2112,235 @@ describe('HomePage', () => {
     });
   });
 
+  describe('sort by label', () => {
+    const invZeta = {
+      id: 'inv-zeta',
+      instrument: 'ZET',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['zeta'],
+    };
+    const invAlpha = {
+      id: 'inv-alpha',
+      instrument: 'ALP',
+      amount: 20,
+      price: 1,
+      purchaseDate: '2023-02-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['alpha'],
+    };
+    const invMango = {
+      id: 'inv-mango',
+      instrument: 'MAN',
+      amount: 30,
+      price: 1,
+      purchaseDate: '2023-03-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: ['mango'],
+    };
+    const invNoLabels = {
+      id: 'inv-nolabels',
+      instrument: 'NIL',
+      amount: 40,
+      price: 1,
+      purchaseDate: '2023-04-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const cell = within(row).getAllByRole('cell')[0];
+        return cell.querySelector('span')?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('AC-001: first click on the Labels header sorts rows A→Z by each investment\'s first label', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZeta, invAlpha, invMango],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['ALP', 'MAN', 'ZET']);
+
+      const labelHeader = sortLabelButton.closest('th');
+      expect(labelHeader?.getAttribute('aria-sort')).toBe('ascending');
+    });
+
+    it('AC-002: second click on the Labels header sorts rows Z→A', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZeta, invAlpha, invMango],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['ZET', 'MAN', 'ALP']);
+
+      const labelHeader = sortLabelButton.closest('th');
+      expect(labelHeader?.getAttribute('aria-sort')).toBe('descending');
+    });
+
+    it('AC-003: unlabeled investments appear after every labeled one in both directions', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZeta, invNoLabels, invAlpha, invMango],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['ALP', 'MAN', 'ZET', 'NIL']);
+
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['ZET', 'MAN', 'ALP', 'NIL']);
+    });
+
+    it('compares by the alphabetically-first label when an investment has multiple labels', async () => {
+      const invDeltaBeta = {
+        id: 'inv-delta-beta',
+        instrument: 'DBC',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['delta', 'beta', 'charlie'],
+      };
+      const invAardvark = {
+        id: 'inv-aardvark',
+        instrument: 'AAR',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['aardvark'],
+      };
+      const invZ = {
+        id: 'inv-z',
+        instrument: 'ZZZ',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-03',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['z'],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZ, invDeltaBeta, invAardvark],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['AAR', 'DBC', 'ZZZ']);
+    });
+
+    it('label comparison is case-insensitive', async () => {
+      const invUppercase = {
+        id: 'inv-upper',
+        instrument: 'UPP',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['Apple'],
+      };
+      const invLowercase = {
+        id: 'inv-lower',
+        instrument: 'LOW',
+        amount: 1,
+        price: 1,
+        purchaseDate: '2023-01-02',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['banana'],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invLowercase, invUppercase],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['UPP', 'LOW']);
+    });
+
+    it('third click clears the label sort, matching other sortable columns', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZeta, invAlpha, invMango],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+      fireEvent.click(sortLabelButton);
+      fireEvent.click(sortLabelButton);
+
+      const labelHeader = sortLabelButton.closest('th');
+      expect(labelHeader?.getAttribute('aria-sort')).toBe('none');
+      expect(visibleInstruments()).toEqual(['ZET', 'ALP', 'MAN']);
+    });
+
+    it('label sort replaces an active amount sort (mutually exclusive)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invZeta, invAlpha, invMango],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['MAN', 'ALP', 'ZET']);
+
+      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
+      fireEvent.click(sortLabelButton);
+
+      expect(visibleInstruments()).toEqual(['ALP', 'MAN', 'ZET']);
+    });
+  });
+
   describe('default sort by amount descending', () => {
     function visibleInstruments() {
       const table = screen.queryByRole('table');

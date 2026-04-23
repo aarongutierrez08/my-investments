@@ -31,6 +31,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
   const [categorySortDirection, setCategorySortDirection] = useState<SortDirection>(null);
+  const [labelSortDirection, setLabelSortDirection] = useState<SortDirection>(null);
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -158,6 +159,28 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       });
       return sorted;
     }
+    if (labelSortDirection !== null) {
+      const firstLabel = (investment: Investment): string | null => {
+        const labels = investment.labels ?? [];
+        if (labels.length === 0) return null;
+        return [...labels].sort((x, y) =>
+          x.localeCompare(y, undefined, { sensitivity: 'base' }),
+        )[0];
+      };
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) => {
+        const aFirst = firstLabel(a);
+        const bFirst = firstLabel(b);
+        if (aFirst === null && bFirst === null) return 0;
+        if (aFirst === null) return 1;
+        if (bFirst === null) return -1;
+        const comparison = aFirst.localeCompare(bFirst, undefined, {
+          sensitivity: 'base',
+        });
+        return labelSortDirection === 'asc' ? comparison : -comparison;
+      });
+      return sorted;
+    }
     return filteredInvestments;
   }, [
     filteredInvestments,
@@ -165,12 +188,14 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     dateSortDirection,
     nameSortDirection,
     categorySortDirection,
+    labelSortDirection,
   ]);
 
   function cycleSortDirection() {
     setDateSortDirection(null);
     setNameSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -182,6 +207,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setSortDirection(null);
     setNameSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setDateSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -193,6 +219,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setSortDirection(null);
     setDateSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setNameSortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
@@ -204,7 +231,20 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setSortDirection(null);
     setDateSortDirection(null);
     setNameSortDirection(null);
+    setLabelSortDirection(null);
     setCategorySortDirection((prev) => {
+      if (prev === null) return 'asc';
+      if (prev === 'asc') return 'desc';
+      return null;
+    });
+  }
+
+  function cycleLabelSortDirection() {
+    setSortDirection(null);
+    setDateSortDirection(null);
+    setNameSortDirection(null);
+    setCategorySortDirection(null);
+    setLabelSortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
       return null;
@@ -561,7 +601,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                   </span>
                 </button>
               </th>
-              <th className="py-3 px-4 text-left">Labels</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  labelSortDirection === 'asc'
+                    ? 'ascending'
+                    : labelSortDirection === 'desc'
+                      ? 'descending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleLabelSortDirection}
+                  aria-label="Sort by label"
+                  className="inline-flex items-center gap-1"
+                >
+                  Labels
+                  <span aria-hidden="true">
+                    {labelSortDirection === 'asc' && '↑'}
+                    {labelSortDirection === 'desc' && '↓'}
+                    {labelSortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th className="py-3 px-4 text-left">Total invested</th>
               <th className="py-3 px-4 text-left">Notes</th>
               <th className="py-3 px-4 text-left">Actions</th>
