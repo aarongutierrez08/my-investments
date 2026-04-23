@@ -25,6 +25,8 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [nameSearch, setNameSearch] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [minAmount, setMinAmount] = useState<string>('');
+  const [maxAmount, setMaxAmount] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
@@ -49,6 +51,16 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     }
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
   }, [investments]);
+
+  const parseBound = (value: string): number | null => {
+    if (value.trim() === '') return null;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return null;
+    return parsed;
+  };
+
+  const minAmountBound = parseBound(minAmount);
+  const maxAmountBound = parseBound(maxAmount);
 
   const filteredInvestments = useMemo(() => {
     const trimmedSearch = nameSearch.trim().toLowerCase();
@@ -77,9 +89,24 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         if (fromDate && purchaseDate < fromDate) return false;
         if (toDate && purchaseDate > toDate) return false;
       }
+      if (minAmountBound !== null && investment.amount < minAmountBound) {
+        return false;
+      }
+      if (maxAmountBound !== null && investment.amount > maxAmountBound) {
+        return false;
+      }
       return true;
     });
-  }, [investments, categoryFilter, labelFilter, nameSearch, fromDate, toDate]);
+  }, [
+    investments,
+    categoryFilter,
+    labelFilter,
+    nameSearch,
+    fromDate,
+    toDate,
+    minAmountBound,
+    maxAmountBound,
+  ]);
 
   const displayedInvestments = useMemo(() => {
     if (sortDirection !== null) {
@@ -194,7 +221,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     labelFilter !== '' ||
     nameSearch.trim() !== '' ||
     fromDate !== '' ||
-    toDate !== '';
+    toDate !== '' ||
+    minAmountBound !== null ||
+    maxAmountBound !== null;
 
   const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
 
@@ -368,6 +397,32 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             type="date"
             value={toDate}
             onChange={(event) => setToDate(event.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
+        <div>
+          <label htmlFor="min-amount" className="block text-sm font-medium mb-1">
+            Min amount
+          </label>
+          <input
+            id="min-amount"
+            type="number"
+            min="0"
+            value={minAmount}
+            onChange={(event) => setMinAmount(event.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          />
+        </div>
+        <div>
+          <label htmlFor="max-amount" className="block text-sm font-medium mb-1">
+            Max amount
+          </label>
+          <input
+            id="max-amount"
+            type="number"
+            min="0"
+            value={maxAmount}
+            onChange={(event) => setMaxAmount(event.target.value)}
             className="border border-gray-300 rounded px-3 py-2"
           />
         </div>

@@ -50,6 +50,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can filter investments by a purchase date range — `app/InvestmentsTable.tsx`
 - Users can filter by name OR label through a single unified search box — `app/InvestmentsTable.tsx`
 - Users can search investments by text contained in their notes through the unified search box — `app/InvestmentsTable.tsx`
+- Users can filter investments by a purchase amount range (min/max) — `app/InvestmentsTable.tsx`
 
 ## Sort
 
