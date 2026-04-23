@@ -51,6 +51,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can filter by name OR label through a single unified search box — `app/InvestmentsTable.tsx`
 - Users can search investments by text contained in their notes through the unified search box — `app/InvestmentsTable.tsx`
 - Users can filter investments by a purchase amount range (min/max) — `app/InvestmentsTable.tsx`
+- Users can clear all active filters at once with a single "Clear filters" button — `app/InvestmentsTable.tsx`
 
 ## Sort
 

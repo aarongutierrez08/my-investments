@@ -216,6 +216,15 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     0,
   );
 
+  const hasActiveFilters =
+    categoryFilter !== '' ||
+    labelFilter !== '' ||
+    nameSearch !== '' ||
+    fromDate !== '' ||
+    toDate !== '' ||
+    minAmount !== '' ||
+    maxAmount !== '';
+
   const isFiltered =
     categoryFilter !== '' ||
     labelFilter !== '' ||
@@ -226,6 +235,16 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     maxAmountBound !== null;
 
   const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
+
+  function clearFilters() {
+    setCategoryFilter('');
+    setLabelFilter('');
+    setNameSearch('');
+    setFromDate('');
+    setToDate('');
+    setMinAmount('');
+    setMaxAmount('');
+  }
 
   const filteredCount = filteredInvestments.length;
   const countLabel = `Showing ${filteredCount} ${filteredCount === 1 ? 'investment' : 'investments'}`;
@@ -426,6 +445,17 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             className="border border-gray-300 rounded px-3 py-2"
           />
         </div>
+        {hasActiveFilters && (
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold px-3 py-2 rounded"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
       </div>
       {filteredInvestments.length === 0 ? (
         <p className="text-center text-gray-500">No investments in this category.</p>
