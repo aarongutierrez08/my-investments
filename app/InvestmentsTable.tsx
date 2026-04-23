@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Category, Investment, Label } from '../lib/types';
+import { buildInvestmentsCsv } from '../lib/csv';
 
 interface InvestmentsTableProps {
   investments: Investment[];
@@ -318,6 +319,17 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     );
   }, [filteredInvestments]);
 
+  function handleExportCsv() {
+    const csv = buildInvestmentsCsv(displayedInvestments);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'investments.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this investment?')) {
       return;
@@ -516,6 +528,15 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             </button>
           </div>
         )}
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-3 py-2 rounded"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
       {filteredInvestments.length === 0 ? (
         <p className="text-center text-gray-500">No investments in this category.</p>
