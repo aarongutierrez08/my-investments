@@ -36,6 +36,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - List shows each investment's purchase date — `app/InvestmentsTable.tsx`
 - List shows the total invested amount across all investments — `app/InvestmentsTable.tsx`
 - List shows total invested per category — `app/InvestmentsTable.tsx`
+- List shows total invested per custom label — `app/InvestmentsTable.tsx`
 - List shows each category's percentage of the total portfolio — `app/InvestmentsTable.tsx`
 - List shows total invested for the currently filtered view — `app/InvestmentsTable.tsx`
 - List shows how many investments match the current filter — `app/InvestmentsTable.tsx`
