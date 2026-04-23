@@ -13,6 +13,11 @@ interface InvestmentsTableProps {
 
 type CategoryFilter = Category | '';
 type SortDirection = 'asc' | 'desc' | null;
+type NotesSortDirection = 'withFirst' | 'withoutFirst' | null;
+
+function hasNotes(investment: Investment): boolean {
+  return (investment.notes ?? '').trim() !== '';
+}
 
 const UNCATEGORIZED = 'Uncategorized';
 
@@ -34,6 +39,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
   const [categorySortDirection, setCategorySortDirection] = useState<SortDirection>(null);
   const [labelSortDirection, setLabelSortDirection] = useState<SortDirection>(null);
+  const [notesSortDirection, setNotesSortDirection] = useState<NotesSortDirection>(null);
 
   const availableLabels = useMemo(() => {
     const unique = new Set<string>();
@@ -187,6 +193,21 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       });
       return sorted;
     }
+    if (notesSortDirection !== null) {
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) => {
+        const aHas = hasNotes(a);
+        const bHas = hasNotes(b);
+        if (aHas !== bHas) {
+          if (notesSortDirection === 'withFirst') {
+            return aHas ? -1 : 1;
+          }
+          return aHas ? 1 : -1;
+        }
+        return b.amount - a.amount;
+      });
+      return sorted;
+    }
     return filteredInvestments;
   }, [
     filteredInvestments,
@@ -195,6 +216,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     nameSortDirection,
     categorySortDirection,
     labelSortDirection,
+    notesSortDirection,
   ]);
 
   function cycleSortDirection() {
@@ -202,6 +224,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setNameSortDirection(null);
     setCategorySortDirection(null);
     setLabelSortDirection(null);
+    setNotesSortDirection(null);
     setSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -214,6 +237,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setNameSortDirection(null);
     setCategorySortDirection(null);
     setLabelSortDirection(null);
+    setNotesSortDirection(null);
     setDateSortDirection((prev) => {
       if (prev === null) return 'desc';
       if (prev === 'desc') return 'asc';
@@ -226,6 +250,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setDateSortDirection(null);
     setCategorySortDirection(null);
     setLabelSortDirection(null);
+    setNotesSortDirection(null);
     setNameSortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
@@ -238,6 +263,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setDateSortDirection(null);
     setNameSortDirection(null);
     setLabelSortDirection(null);
+    setNotesSortDirection(null);
     setCategorySortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
@@ -250,9 +276,23 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setDateSortDirection(null);
     setNameSortDirection(null);
     setCategorySortDirection(null);
+    setNotesSortDirection(null);
     setLabelSortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
+      return null;
+    });
+  }
+
+  function cycleNotesSortDirection() {
+    setSortDirection(null);
+    setDateSortDirection(null);
+    setNameSortDirection(null);
+    setCategorySortDirection(null);
+    setLabelSortDirection(null);
+    setNotesSortDirection((prev) => {
+      if (prev === null) return 'withFirst';
+      if (prev === 'withFirst') return 'withoutFirst';
       return null;
     });
   }
@@ -691,7 +731,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                 </button>
               </th>
               <th className="py-3 px-4 text-left">Total invested</th>
-              <th className="py-3 px-4 text-left">Notes</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  notesSortDirection === 'withFirst'
+                    ? 'descending'
+                    : notesSortDirection === 'withoutFirst'
+                      ? 'ascending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleNotesSortDirection}
+                  aria-label="Sort by notes"
+                  className="inline-flex items-center gap-1"
+                >
+                  Notes
+                  <span aria-hidden="true">
+                    {notesSortDirection === 'withFirst' && '↓'}
+                    {notesSortDirection === 'withoutFirst' && '↑'}
+                    {notesSortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th className="py-3 px-4 text-left">Actions</th>
             </tr>
           </thead>
