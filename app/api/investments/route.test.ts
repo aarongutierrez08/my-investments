@@ -53,6 +53,81 @@ describe('POST /api/investments', () => {
     expect(storage.addInvestment).toHaveBeenCalledWith(body);
   });
 
+  it('creates the investment without notes when notes is omitted', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2026-01-15',
+      category: 'Stocks',
+      labelIds: [],
+    };
+
+    const response = await POST(makeRequest(payload));
+    const body = (await response.json()) as Investment;
+
+    expect(response.status).toBe(201);
+    expect(body.notes).toBeUndefined();
+    expect(storage.addInvestment).toHaveBeenCalledWith(
+      expect.not.objectContaining({ notes: expect.anything() }),
+    );
+  });
+
+  it('treats an empty-string notes as not provided', async () => {
+    const payload = {
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2026-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      notes: '',
+    };
+
+    const response = await POST(makeRequest(payload));
+    const body = (await response.json()) as Investment;
+
+    expect(response.status).toBe(201);
+    expect(body.notes).toBeUndefined();
+    expect(storage.addInvestment).toHaveBeenCalledWith(
+      expect.not.objectContaining({ notes: expect.anything() }),
+    );
+  });
+
+  it('treats whitespace-only notes as not provided and trims meaningful notes', async () => {
+    const blankResponse = await POST(
+      makeRequest({
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labelIds: [],
+        notes: '   \n\t  ',
+      }),
+    );
+    const blankBody = (await blankResponse.json()) as Investment;
+
+    expect(blankResponse.status).toBe(201);
+    expect(blankBody.notes).toBeUndefined();
+
+    const trimmedResponse = await POST(
+      makeRequest({
+        instrument: 'BTC',
+        amount: 0.5,
+        price: 60000,
+        purchaseDate: '2026-02-01',
+        category: 'Crypto',
+        labelIds: [],
+        notes: '  Bought after dip  ',
+      }),
+    );
+    const trimmedBody = (await trimmedResponse.json()) as Investment;
+
+    expect(trimmedResponse.status).toBe(201);
+    expect(trimmedBody.notes).toBe('Bought after dip');
+  });
+
   it('generates the id server-side and ignores any client-provided id', async () => {
     const payload = {
       id: 'malicious-client-id',

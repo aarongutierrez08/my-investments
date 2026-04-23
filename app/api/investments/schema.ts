@@ -32,5 +32,14 @@ export const investmentSchema = z.object({
     .array(z.string(), { message: 'labels must be an array of strings' })
     .optional()
     .transform((raw) => (raw === undefined ? undefined : sanitizeLabels(raw))),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .optional()
+    .transform((raw) => {
+      if (raw === undefined) {
+        return undefined;
+      }
+      const trimmed = raw.trim();
+      return trimmed.length === 0 ? undefined : trimmed;
+    }),
 });
