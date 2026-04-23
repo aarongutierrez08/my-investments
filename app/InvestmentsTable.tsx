@@ -210,6 +210,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     return breakdown;
   }, [filteredInvestments]);
 
+  const labelBreakdown = useMemo(() => {
+    const breakdown = new Map<string, number>();
+    for (const investment of filteredInvestments) {
+      for (const label of investment.labels ?? []) {
+        breakdown.set(label, (breakdown.get(label) ?? 0) + investment.amount);
+      }
+    }
+    return new Map(
+      Array.from(breakdown.entries()).sort(([a], [b]) => a.localeCompare(b)),
+    );
+  }, [filteredInvestments]);
+
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this investment?')) {
       return;
@@ -270,6 +282,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                   : '';
               return <li key={name}>{`${name}: $${total}${suffix}`}</li>;
             })}
+          </ul>
+        </section>
+      )}
+      {labelBreakdown.size > 0 && (
+        <section aria-labelledby="totals-by-label-heading" className="mb-6">
+          <h2 id="totals-by-label-heading" className="text-lg font-semibold mb-2">
+            Totals by label
+          </h2>
+          <ul className="list-disc list-inside">
+            {Array.from(labelBreakdown.entries()).map(([name, total]) => (
+              <li key={name}>{`${name}: $${total}`}</li>
+            ))}
           </ul>
         </section>
       )}

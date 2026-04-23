@@ -2914,6 +2914,108 @@ describe('HomePage', () => {
     });
   });
 
+  describe('issue #72: total invested per custom label', () => {
+    it('AC-001: shows a row per label with the sum of amounts of every investment that carries that label', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'AAPL',
+            amount: 1000,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['Retirement', 'LongTerm'],
+          },
+          {
+            id: 'i2',
+            instrument: 'GOOG',
+            amount: 500,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['LongTerm'],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        screen.getByRole('heading', { name: /totals by label/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/^LongTerm: \$1500\b/)).toBeInTheDocument();
+      expect(screen.getByText(/^Retirement: \$1000\b/)).toBeInTheDocument();
+    });
+
+    it('AC-002: excludes untagged investments from the per-label totals but keeps them in the overall total', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'tagged',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['Growth'],
+          },
+          {
+            id: 'untagged',
+            instrument: 'GOOG',
+            amount: 50,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        screen.getByRole('heading', { name: /totals by label/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/^Growth: \$100\b/)).toBeInTheDocument();
+      expect(screen.queryByText(/^GOOG:/)).not.toBeInTheDocument();
+      expect(screen.getByText('Total invested: $150')).toBeInTheDocument();
+    });
+
+    it('AC-003: does not render the per-label totals block when no investment carries any label', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        screen.queryByRole('heading', { name: /totals by label/i }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe('issue #68: search investments by notes content', () => {
     const invWithBonus = {
       id: 'inv-bonus',
