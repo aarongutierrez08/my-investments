@@ -302,6 +302,14 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     0,
   );
 
+  const totalCost = filteredInvestments.reduce(
+    (sum, investment) => sum + investment.amount * investment.price,
+    0,
+  );
+
+  const averageInvested =
+    filteredInvestments.length === 0 ? 0 : totalCost / filteredInvestments.length;
+
   const hasActiveFilters =
     categoryFilter !== '' ||
     labelFilter !== '' ||
@@ -323,6 +331,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     onlyWithNotes;
 
   const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
+  const averageLabel = isFiltered ? 'Average (filtered)' : 'Average';
 
   function clearFilters() {
     setCategoryFilter('');
@@ -413,6 +422,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         <p className="mb-4 text-lg font-semibold">
           {totalInvestedLabel}: ${totalInvested}
         </p>
+        <p className="mb-4 text-lg font-semibold">
+          {averageLabel}: ${averageInvested}
+        </p>
         <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
       </>
     );
@@ -428,6 +440,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       <p className="mb-1 text-sm text-gray-600">{countLabel}</p>
       <p className="mb-4 text-lg font-semibold">
         {totalInvestedLabel}: ${totalInvested}
+      </p>
+      <p className="mb-4 text-lg font-semibold">
+        {averageLabel}: ${averageInvested}
       </p>
       {categoryBreakdown.size > 0 && (
         <section aria-labelledby="total-by-category-heading" className="mb-6">
