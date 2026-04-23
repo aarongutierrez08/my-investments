@@ -3027,32 +3027,6 @@ describe('HomePage', () => {
       expect(within(row).getByText('Bought after earnings call')).toBeInTheDocument();
     });
 
-    it('renders a "Notes" column header that is not sortable', async () => {
-      const investment = {
-        id: 'inv-note',
-        instrument: 'AAPL',
-        amount: 10,
-        price: 150,
-        purchaseDate: '2026-03-14',
-        category: 'Stocks',
-        labelIds: [],
-        labels: [],
-        notes: 'Bought after earnings call',
-      };
-
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [investment],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const header = screen.getByRole('columnheader', { name: 'Notes' });
-      expect(header).toBeInTheDocument();
-      expect(within(header).queryByRole('button')).not.toBeInTheDocument();
-    });
-
     it('AC-002: leaves the notes cell empty when an investment has no notes', async () => {
       const investmentWithoutNotes = {
         id: 'inv-no-notes',
@@ -4205,6 +4179,225 @@ describe('HomePage', () => {
       expect(items).toHaveLength(1);
       expect(items[0]).toHaveTextContent('2024: $100');
       expect(within(section).queryByText(/unknown/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('issue #87: sort investments list by notes presence', () => {
+    const invWithNotes1 = {
+      id: 'inv-with-1',
+      instrument: 'AAPL',
+      amount: 100,
+      price: 1,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: 'Bought after earnings call',
+    };
+    const invWithNotes2 = {
+      id: 'inv-with-2',
+      instrument: 'GOOG',
+      amount: 50,
+      price: 1,
+      purchaseDate: '2023-02-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: 'Long-term hold',
+    };
+    const invEmptyNotes = {
+      id: 'inv-empty',
+      instrument: 'MSFT',
+      amount: 200,
+      price: 1,
+      purchaseDate: '2023-03-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: '',
+    };
+    const invWhitespaceNotes = {
+      id: 'inv-ws',
+      instrument: 'TSLA',
+      amount: 25,
+      price: 1,
+      purchaseDate: '2023-04-01',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+      notes: '   ',
+    };
+    const invMissingNotes = {
+      id: 'inv-missing',
+      instrument: 'BTC',
+      amount: 10,
+      price: 1,
+      purchaseDate: '2023-05-01',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const firstCell = within(row).getAllByRole('cell')[0];
+        const nameSpan = firstCell.querySelector('span');
+        return nameSpan?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('AC-001: first click on the Notes header places rows with non-empty notes before rows without', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          invMissingNotes,
+          invWithNotes1,
+          invEmptyNotes,
+          invWithNotes2,
+          invWhitespaceNotes,
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+
+      const instruments = visibleInstruments();
+      expect(instruments.slice(0, 2)).toEqual(['AAPL', 'GOOG']);
+      expect(instruments.slice(2)).toEqual(['MSFT', 'TSLA', 'BTC']);
+    });
+
+    it('AC-002: second click on the Notes header places rows without notes before rows with notes', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes1, invEmptyNotes, invWithNotes2, invWhitespaceNotes, invMissingNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+      fireEvent.click(sortNotesButton);
+
+      const instruments = visibleInstruments();
+      expect(instruments.slice(0, 3)).toEqual(['MSFT', 'TSLA', 'BTC']);
+      expect(instruments.slice(3)).toEqual(['AAPL', 'GOOG']);
+    });
+
+    it('AC-003: notes sort composes with an active category filter', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes1, invEmptyNotes, invWithNotes2, invWhitespaceNotes, invMissingNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+
+      const categoryFilter = screen.getByLabelText('Filter by category') as HTMLSelectElement;
+      fireEvent.change(categoryFilter, { target: { value: 'Stocks' } });
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'GOOG', 'MSFT']);
+    });
+
+    it('whitespace-only notes are treated as "no notes" (matches "Only with notes" filter rule)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWhitespaceNotes, invWithNotes1],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'TSLA']);
+    });
+
+    it('within the same notes group, ties fall back to amount descending', async () => {
+      const small = { ...invWithNotes1, id: 'small', instrument: 'SMALL', amount: 1 };
+      const big = { ...invWithNotes2, id: 'big', instrument: 'BIG', amount: 999 };
+      const mid = { ...invWithNotes1, id: 'mid', instrument: 'MID', amount: 50 };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [small, big, mid],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+
+      expect(visibleInstruments()).toEqual(['BIG', 'MID', 'SMALL']);
+    });
+
+    it('third click clears the notes sort, matching other sortable columns', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes1, invEmptyNotes, invWithNotes2],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+      fireEvent.click(sortNotesButton);
+      fireEvent.click(sortNotesButton);
+
+      const notesHeader = sortNotesButton.closest('th');
+      expect(notesHeader?.getAttribute('aria-sort')).toBe('none');
+      expect(visibleInstruments()).toEqual(['AAPL', 'MSFT', 'GOOG']);
+    });
+
+    it('notes sort replaces an active amount sort (mutually exclusive)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes1, invEmptyNotes, invWithNotes2],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['MSFT', 'AAPL', 'GOOG']);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+
+      const instruments = visibleInstruments();
+      expect(instruments.slice(0, 2)).toEqual(['AAPL', 'GOOG']);
+      expect(instruments[2]).toBe('MSFT');
+    });
+
+    it('notes sort composes with the "Only with notes" filter (orders the remaining rows)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes1, invEmptyNotes, invWithNotes2, invWhitespaceNotes, invMissingNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortNotesButton = screen.getByRole('button', { name: /sort by notes/i });
+      fireEvent.click(sortNotesButton);
+
+      const onlyWithNotes = screen.getByLabelText('Only with notes') as HTMLInputElement;
+      fireEvent.click(onlyWithNotes);
+
+      expect(visibleInstruments()).toEqual(['AAPL', 'GOOG']);
     });
   });
 });
