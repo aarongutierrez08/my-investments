@@ -2764,4 +2764,153 @@ describe('HomePage', () => {
       expect(optionValues).toEqual(['']);
     });
   });
+
+  describe('issue #66: notes column on the investments list', () => {
+    function findRowByInstrument(instrument: string) {
+      const rows = screen.getAllByRole('row');
+      return rows.find((row) =>
+        within(row).queryByRole('cell', { name: instrument }),
+      )!;
+    }
+
+    it('AC-001: shows the note text in the row when an investment has notes', async () => {
+      const investment = {
+        id: 'inv-note',
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-03-14',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+        notes: 'Bought after earnings call',
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('AAPL');
+      expect(within(row).getByText('Bought after earnings call')).toBeInTheDocument();
+    });
+
+    it('renders a "Notes" column header that is not sortable', async () => {
+      const investment = {
+        id: 'inv-note',
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-03-14',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+        notes: 'Bought after earnings call',
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const header = screen.getByRole('columnheader', { name: 'Notes' });
+      expect(header).toBeInTheDocument();
+      expect(within(header).queryByRole('button')).not.toBeInTheDocument();
+    });
+
+    it('AC-002: leaves the notes cell empty when an investment has no notes', async () => {
+      const investmentWithoutNotes = {
+        id: 'inv-no-notes',
+        instrument: 'BTC',
+        amount: 1,
+        price: 30000,
+        purchaseDate: '2026-02-20',
+        category: 'Crypto',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investmentWithoutNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('BTC');
+      const cells = within(row).getAllByRole('cell');
+      const notesCell = cells[cells.length - 2];
+      expect(notesCell.textContent).toBe('');
+      expect(within(row).queryByText('-')).not.toBeInTheDocument();
+      expect(within(row).queryByText(/n\/a/i)).not.toBeInTheDocument();
+    });
+
+    it('AC-002: leaves the notes cell empty when notes is an empty string', async () => {
+      const investmentWithEmptyNotes = {
+        id: 'inv-empty-notes',
+        instrument: 'ETH',
+        amount: 1,
+        price: 2000,
+        purchaseDate: '2026-02-20',
+        category: 'Crypto',
+        labelIds: [],
+        labels: [],
+        notes: '',
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investmentWithEmptyNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('ETH');
+      const cells = within(row).getAllByRole('cell');
+      const notesCell = cells[cells.length - 2];
+      expect(notesCell.textContent).toBe('');
+    });
+
+    it('AC-003: exposes the full note text via the title attribute for hover', async () => {
+      const longNote =
+        'This is a very long note that should be truncated in the table cell with ' +
+        'an ellipsis so the layout does not break when a user writes a lot of text ' +
+        'about their investment rationale, stop-loss strategy, and any relevant ' +
+        'research links.';
+
+      const investment = {
+        id: 'inv-long',
+        instrument: 'MSFT',
+        amount: 3,
+        price: 400,
+        purchaseDate: '2026-03-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+        notes: longNote,
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [investment],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const row = findRowByInstrument('MSFT');
+      const cells = within(row).getAllByRole('cell');
+      const notesCell = cells[cells.length - 2];
+      expect(notesCell.getAttribute('title')).toBe(longNote);
+      expect(notesCell.textContent).toBe(longNote);
+    });
+  });
 });

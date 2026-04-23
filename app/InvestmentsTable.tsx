@@ -451,6 +451,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
               </th>
               <th className="py-3 px-4 text-left">Labels</th>
               <th className="py-3 px-4 text-left">Total invested</th>
+              <th className="py-3 px-4 text-left">Notes</th>
               <th className="py-3 px-4 text-left">Actions</th>
             </tr>
           </thead>
@@ -495,6 +496,12 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                     ))}
                   </td>
                   <td className="py-3 px-4">{totalInvested}</td>
+                  <td
+                    className="py-3 px-4 truncate max-w-xs"
+                    title={investment.notes ? investment.notes : undefined}
+                  >
+                    {investment.notes ?? ''}
+                  </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <Link
