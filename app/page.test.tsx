@@ -4618,4 +4618,110 @@ describe('HomePage', () => {
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     });
   });
+
+  describe('min/max purchase amount summary', () => {
+    const inv1 = {
+      id: 'r1',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 10,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+    };
+    const inv2 = {
+      id: 'r2',
+      instrument: 'BTC',
+      amount: 20,
+      price: 10,
+      purchaseDate: '2023-01-02',
+      category: 'Crypto',
+      labelIds: [],
+    };
+    const inv3 = {
+      id: 'r3',
+      instrument: 'US10Y',
+      amount: 30,
+      price: 10,
+      purchaseDate: '2023-01-03',
+      category: 'Bonds',
+      labelIds: [],
+    };
+
+    it('AC-001: shows the smallest and largest amount * price across all investments when no filter is active', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Min purchase amount: $100')).toBeInTheDocument();
+      expect(screen.getByText('Max purchase amount: $300')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the min and max when a category filter narrows the visible rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Crypto' } });
+
+      expect(screen.getByText('Min purchase amount (filtered): $200')).toBeInTheDocument();
+      expect(screen.getByText('Max purchase amount (filtered): $200')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the min and max when the search box narrows the visible rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'US10Y' } });
+
+      expect(screen.getByText('Min purchase amount (filtered): $300')).toBeInTheDocument();
+      expect(screen.getByText('Max purchase amount (filtered): $300')).toBeInTheDocument();
+    });
+
+    it('AC-003: shows "$0" without "NaN" when the active filter matches zero investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
+
+      expect(screen.getByText('Min purchase amount (filtered): $0')).toBeInTheDocument();
+      expect(screen.getByText('Max purchase amount (filtered): $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
+    it('shows "$0" when there are no investments at all', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Min purchase amount: $0')).toBeInTheDocument();
+      expect(screen.getByText('Max purchase amount: $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+  });
 });
