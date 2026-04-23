@@ -84,7 +84,7 @@ export function EditInvestmentForm({ investment, labels }: EditInvestmentFormPro
       category,
       labelIds,
       labels: submittedLabels,
-      ...(notes && { notes }),
+      notes,
     };
 
     startTransition(async () => {

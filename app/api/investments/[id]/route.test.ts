@@ -293,6 +293,26 @@ describe('PUT /api/investments/[id]', () => {
     expect(storage.updateInvestment).not.toHaveBeenCalled();
   });
 
+  it('clears the stored notes when the payload notes field is an empty string', async () => {
+    const updated: Investment = {
+      id: 'inv-001',
+      labels: [],
+      ...validPayload,
+      notes: undefined,
+    };
+    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+
+    const response = await PUT(
+      makePutRequest('inv-001', { ...validPayload, notes: '' }),
+      makeContext('inv-001'),
+    );
+
+    expect(response.status).toBe(200);
+    const patch = (storage.updateInvestment as unknown as vi.Mock).mock.calls[0][1];
+    expect('notes' in patch).toBe(true);
+    expect(patch.notes).toBeUndefined();
+  });
+
   it('ignores a client-provided id in the payload', async () => {
     const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
     (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);

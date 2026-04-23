@@ -23,6 +23,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can edit the custom labels of an investment — `app/edit/[id]/EditInvestmentForm.tsx`
 - Users can edit the purchase date of an investment — `app/edit/[id]/EditInvestmentForm.tsx`
 - Users can change the category of an investment while editing — `app/edit/[id]/EditInvestmentForm.tsx`
+- Users can edit or clear the notes of an existing investment — `app/edit/[id]/EditInvestmentForm.tsx`
 
 ## Delete
 
