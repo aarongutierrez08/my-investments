@@ -3127,4 +3127,197 @@ describe('HomePage', () => {
       expect(screen.getByPlaceholderText('Search by name, label or notes')).toBeInTheDocument();
     });
   });
+
+  describe('issue #75: filter investments list by purchase amount range', () => {
+    const invSmall = {
+      id: 'inv-small',
+      instrument: 'AAA',
+      amount: 100,
+      price: 1,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMedium = {
+      id: 'inv-medium',
+      instrument: 'BBB',
+      amount: 500,
+      price: 1,
+      purchaseDate: '2023-02-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invLarge = {
+      id: 'inv-large',
+      instrument: 'CCC',
+      amount: 1000,
+      price: 1,
+      purchaseDate: '2023-03-15',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const firstCell = within(row).getAllByRole('cell')[0];
+        const nameSpan = firstCell.querySelector('span');
+        return nameSpan?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('AC-002: entering a minimum amount keeps only investments at or above it, and the summaries reflect the subset', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invSmall, invMedium, invLarge],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const minInput = screen.getByLabelText('Min amount');
+      fireEvent.change(minInput, { target: { value: '400' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('BBB');
+      expect(instruments).toContain('CCC');
+      expect(instruments).not.toContain('AAA');
+
+      expect(screen.getByText('Showing 2 investments')).toBeInTheDocument();
+      expect(screen.getByText('Total invested (filtered): $1500')).toBeInTheDocument();
+    });
+
+    it('AC-002: entering a maximum amount keeps only investments at or below it', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invSmall, invMedium, invLarge],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const maxInput = screen.getByLabelText('Max amount');
+      fireEvent.change(maxInput, { target: { value: '500' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAA');
+      expect(instruments).toContain('BBB');
+      expect(instruments).not.toContain('CCC');
+
+      expect(screen.getByText('Showing 2 investments')).toBeInTheDocument();
+      expect(screen.getByText('Total invested (filtered): $600')).toBeInTheDocument();
+    });
+
+    it('AC-002: composes min/max with an active category filter (intersection)', async () => {
+      const invStocks200 = {
+        id: 'inv-s-200',
+        instrument: 'AAA',
+        amount: 200,
+        price: 1,
+        purchaseDate: '2023-01-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invStocks700 = {
+        id: 'inv-s-700',
+        instrument: 'BBB',
+        amount: 700,
+        price: 1,
+        purchaseDate: '2023-02-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invStocks900 = {
+        id: 'inv-s-900',
+        instrument: 'CCC',
+        amount: 900,
+        price: 1,
+        purchaseDate: '2023-03-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const invCrypto500 = {
+        id: 'inv-c-500',
+        instrument: 'DDD',
+        amount: 500,
+        price: 1,
+        purchaseDate: '2023-04-15',
+        category: 'Crypto',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invStocks200, invStocks700, invStocks900, invCrypto500],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const minInput = screen.getByLabelText('Min amount');
+      const maxInput = screen.getByLabelText('Max amount');
+      fireEvent.change(minInput, { target: { value: '200' } });
+      fireEvent.change(maxInput, { target: { value: '800' } });
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAA');
+      expect(instruments).toContain('BBB');
+      expect(instruments).not.toContain('CCC');
+      expect(instruments).not.toContain('DDD');
+
+      expect(screen.getByText('Showing 2 investments')).toBeInTheDocument();
+    });
+
+    it('AC-001: Min amount and Max amount inputs start empty so no amount filtering is applied', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invSmall, invMedium, invLarge],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const minInput = screen.getByLabelText('Min amount') as HTMLInputElement;
+      const maxInput = screen.getByLabelText('Max amount') as HTMLInputElement;
+      expect(minInput.value).toBe('');
+      expect(maxInput.value).toBe('');
+
+      expect(visibleInstruments()).toEqual(
+        expect.arrayContaining(['AAA', 'BBB', 'CCC']),
+      );
+      expect(screen.getByText('Showing 3 investments')).toBeInTheDocument();
+    });
+
+    it('ignores a negative minimum (treats it as unset)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invSmall, invMedium, invLarge],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const minInput = screen.getByLabelText('Min amount');
+      fireEvent.change(minInput, { target: { value: '-100' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAA');
+      expect(instruments).toContain('BBB');
+      expect(instruments).toContain('CCC');
+    });
+  });
 });
