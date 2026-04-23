@@ -319,6 +319,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     );
   }, [filteredInvestments]);
 
+  const yearBreakdown = useMemo(() => {
+    const breakdown = new Map<string, number>();
+    for (const investment of filteredInvestments) {
+      const purchaseDate = investment.purchaseDate || '';
+      if (!purchaseDate) continue;
+      const year = purchaseDate.slice(0, 4);
+      if (year.length !== 4) continue;
+      breakdown.set(year, (breakdown.get(year) ?? 0) + investment.amount);
+    }
+    return Array.from(breakdown.entries()).sort(([a], [b]) => b.localeCompare(a));
+  }, [filteredInvestments]);
+
   function handleExportCsv() {
     const csv = buildInvestmentsCsv(displayedInvestments);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -401,6 +413,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           <ul className="list-disc list-inside">
             {Array.from(labelBreakdown.entries()).map(([name, total]) => (
               <li key={name}>{`${name}: $${total}`}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {yearBreakdown.length > 0 && (
+        <section aria-labelledby="totals-by-year-heading" className="mb-6">
+          <h2 id="totals-by-year-heading" className="text-lg font-semibold mb-2">
+            Totals by year
+          </h2>
+          <ul className="list-disc list-inside">
+            {yearBreakdown.map(([year, total]) => (
+              <li key={year}>{`${year}: $${total}`}</li>
             ))}
           </ul>
         </section>
