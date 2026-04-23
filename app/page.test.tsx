@@ -209,7 +209,7 @@ describe('HomePage', () => {
       const select = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(select, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'no-such-instrument' } });
 
       expect(screen.getByText(/no investments in this category/i)).toBeInTheDocument();
@@ -866,11 +866,11 @@ describe('HomePage', () => {
       });
     });
 
-    it('AC-001: renders a search input with placeholder "Search by name or label"', async () => {
+    it('AC-001: renders a search input with placeholder "Search by name, label or notes"', async () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       expect(search).toBeInTheDocument();
     });
 
@@ -878,7 +878,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'Apple' } });
 
       const instruments = visibleInstruments();
@@ -891,7 +891,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'apple' } });
 
       const instruments = visibleInstruments();
@@ -902,7 +902,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: '  apple  ' } });
 
       const instruments = visibleInstruments();
@@ -916,7 +916,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'apple' } });
 
       const instruments = visibleInstruments();
@@ -930,7 +930,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'apple' } });
       expect(visibleInstruments()).toEqual(['Apple Inc']);
 
@@ -998,7 +998,7 @@ describe('HomePage', () => {
       });
     }
 
-    it('uses "Search by name or label" as the placeholder', async () => {
+    it('uses "Search by name, label or notes" as the placeholder', async () => {
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({
         investments: [invApple],
         labels: [],
@@ -1007,7 +1007,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(screen.getByPlaceholderText('Search by name or label')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search by name, label or notes')).toBeInTheDocument();
     });
 
     it('AC-001: typing a label text shows only rows whose labels match', async () => {
@@ -1019,7 +1019,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'tech' } });
 
       const instruments = visibleInstruments();
@@ -1036,7 +1036,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'GROWTH' } });
 
       const instruments = visibleInstruments();
@@ -1056,7 +1056,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'growth' } });
 
       const instruments = visibleInstruments();
@@ -1294,7 +1294,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'no-match-xyz' } });
 
       expect(
@@ -2718,7 +2718,7 @@ describe('HomePage', () => {
       const select = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(select, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name or label');
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
       fireEvent.change(search, { target: { value: 'AAPL' } });
 
       expect(visibleInstruments()).toEqual(['AAPL']);
@@ -2911,6 +2911,118 @@ describe('HomePage', () => {
       const notesCell = cells[cells.length - 2];
       expect(notesCell.getAttribute('title')).toBe(longNote);
       expect(notesCell.textContent).toBe(longNote);
+    });
+  });
+
+  describe('issue #68: search investments by notes content', () => {
+    const invWithBonus = {
+      id: 'inv-bonus',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2026-03-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: 'Year-end bonus 2025',
+    };
+
+    const invWithoutMatch = {
+      id: 'inv-other',
+      instrument: 'MSFT',
+      amount: 5,
+      price: 300,
+      purchaseDate: '2026-02-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: 'Long-term hold',
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const firstCell = within(row).getAllByRole('cell')[0];
+        const nameSpan = firstCell.querySelector('span');
+        return nameSpan?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('AC-001: typing a query that matches only the notes filters out non-matching rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithBonus, invWithoutMatch],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      fireEvent.change(search, { target: { value: 'bonus' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['AAPL']);
+      expect(screen.getByText(/showing 1 investment/i)).toBeInTheDocument();
+      expect(screen.getByText('Total invested (filtered): $10')).toBeInTheDocument();
+    });
+
+    it('AC-002: matches notes case-insensitively (typing "BONUS" matches notes "bonus")', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithBonus, invWithoutMatch],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      fireEvent.change(search, { target: { value: 'BONUS' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['AAPL']);
+    });
+
+    it('AC-003: investments without notes still match when their name matches the query', async () => {
+      const invNoNotesNameMatch = {
+        id: 'inv-no-notes',
+        instrument: 'Bonus Fund',
+        amount: 1,
+        price: 100,
+        purchaseDate: '2026-01-10',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invNoNotesNameMatch, invWithoutMatch],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      fireEvent.change(search, { target: { value: 'bonus' } });
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['Bonus Fund']);
+    });
+
+    it('AC-004: placeholder communicates that search covers name, label and notes', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithBonus],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByPlaceholderText('Search by name, label or notes')).toBeInTheDocument();
     });
   });
 });
