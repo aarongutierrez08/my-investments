@@ -4400,4 +4400,105 @@ describe('HomePage', () => {
       expect(visibleInstruments()).toEqual(['AAPL', 'GOOG']);
     });
   });
+
+  describe('average investment amount summary', () => {
+    const inv1 = {
+      id: 'i1',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 10,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+    };
+    const inv2 = {
+      id: 'i2',
+      instrument: 'BTC',
+      amount: 20,
+      price: 10,
+      purchaseDate: '2023-01-02',
+      category: 'Crypto',
+      labelIds: [],
+    };
+    const inv3 = {
+      id: 'i3',
+      instrument: 'US10Y',
+      amount: 30,
+      price: 10,
+      purchaseDate: '2023-01-03',
+      category: 'Bonds',
+      labelIds: [],
+    };
+
+    it('AC-001: shows the arithmetic mean of amount * price across all investments when no filter is active', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Average: $200')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the average when a category filter narrows the visible rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Crypto' } });
+
+      expect(screen.getByText('Average (filtered): $200')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the average when the search box narrows the visible rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'US10Y' } });
+
+      expect(screen.getByText('Average (filtered): $300')).toBeInTheDocument();
+    });
+
+    it('AC-003: shows "$0" without "NaN" when the active filter matches zero investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
+
+      expect(screen.getByText('Average (filtered): $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
+    it('shows "Average: $0" when there are no investments at all', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Average: $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+  });
 });
