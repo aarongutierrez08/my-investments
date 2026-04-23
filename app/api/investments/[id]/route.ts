@@ -42,6 +42,9 @@ export async function PUT(
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  const notesWasSent =
+    typeof payload === 'object' && payload !== null && 'notes' in payload;
+
   const patch: Partial<Investment> = {
     instrument: parsed.data.instrument,
     amount: parsed.data.amount,
@@ -50,7 +53,7 @@ export async function PUT(
     category: parsed.data.category,
     labelIds: parsed.data.labelIds,
     ...(parsed.data.labels !== undefined && { labels: parsed.data.labels }),
-    ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
+    ...(notesWasSent && { notes: parsed.data.notes }),
   };
 
   const updated = await storage.updateInvestment(id, patch);

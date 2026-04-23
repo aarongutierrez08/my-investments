@@ -212,6 +212,72 @@ describe('EditInvestmentForm', () => {
     });
   });
 
+  describe('notes', () => {
+    it('pre-fills the notes textarea with the investment current notes', () => {
+      render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+      const notes = screen.getByLabelText(/notes/i) as HTMLTextAreaElement;
+      expect(notes.value).toBe('Initial position');
+    });
+
+    it('renders an empty textarea when the investment has no notes', () => {
+      const withoutNotes: Investment = { ...investment, notes: undefined };
+      render(<EditInvestmentForm investment={withoutNotes} labels={labels} />);
+
+      const notes = screen.getByLabelText(/notes/i) as HTMLTextAreaElement;
+      expect(notes.value).toBe('');
+    });
+
+    it('sends the edited notes in the PUT body when changed and submitted', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ...investment, notes: 'Revised thesis' }), {
+          status: 200,
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+      fireEvent.change(screen.getByLabelText(/notes/i), {
+        target: { value: 'Revised thesis' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.notes).toBe('Revised thesis');
+    });
+
+    it('sends an empty notes value when the textarea is cleared and submitted', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ...investment, notes: undefined }), {
+          status: 200,
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+      fireEvent.change(screen.getByLabelText(/notes/i), {
+        target: { value: '' },
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body).toHaveProperty('notes');
+      expect(body.notes).toBe('');
+    });
+  });
+
   it('shows an inline error message when the server returns an error', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ error: 'something broke' }), { status: 500 }),
