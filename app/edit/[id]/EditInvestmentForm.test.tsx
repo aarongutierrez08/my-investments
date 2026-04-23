@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EditInvestmentForm } from './EditInvestmentForm';
-import type { Investment } from '../../../lib/types';
+import { CATEGORIES, type Investment } from '../../../lib/types';
 
 const pushMock = vi.fn();
 const refreshMock = vi.fn();
@@ -48,6 +48,14 @@ describe('EditInvestmentForm', () => {
 
     const category = screen.getByLabelText(/category/i) as HTMLSelectElement;
     expect(category.value).toBe('Stocks');
+  });
+
+  it('renders the same predefined categories offered by the create form', () => {
+    render(<EditInvestmentForm investment={investment} labels={labels} />);
+
+    for (const category of CATEGORIES) {
+      expect(screen.getByRole('option', { name: category })).toBeInTheDocument();
+    }
   });
 
   it('pre-fills the purchase date input with the investment current value', () => {
