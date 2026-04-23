@@ -4501,4 +4501,121 @@ describe('HomePage', () => {
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     });
   });
+
+  describe('median investment amount summary', () => {
+    const oddInv1 = {
+      id: 'm1',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 10,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+    };
+    const oddInv2 = {
+      id: 'm2',
+      instrument: 'BTC',
+      amount: 10,
+      price: 30,
+      purchaseDate: '2023-01-02',
+      category: 'Stocks',
+      labelIds: [],
+    };
+    const oddInv3 = {
+      id: 'm3',
+      instrument: 'US10Y',
+      amount: 10,
+      price: 100,
+      purchaseDate: '2023-01-03',
+      category: 'Stocks',
+      labelIds: [],
+    };
+
+    it('AC-001: shows the middle value of amount * price for an odd-count filtered view', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [oddInv1, oddInv2, oddInv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Median: $300')).toBeInTheDocument();
+    });
+
+    it('AC-001: shows the mean of the two middle values for an even-count filtered view', async () => {
+      const evenInv4 = {
+        id: 'm4',
+        instrument: 'ETH',
+        amount: 10,
+        price: 20,
+        purchaseDate: '2023-01-04',
+        category: 'Stocks',
+        labelIds: [],
+      };
+      const evenInv5 = {
+        id: 'm5',
+        instrument: 'SOL',
+        amount: 10,
+        price: 40,
+        purchaseDate: '2023-01-05',
+        category: 'Stocks',
+        labelIds: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [oddInv1, evenInv4, evenInv5, oddInv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Median: $300')).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the median when the filtered set changes', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [oddInv1, oddInv2, oddInv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'US10Y' } });
+
+      expect(screen.getByText('Median (filtered): $1000')).toBeInTheDocument();
+    });
+
+    it('AC-003: shows "Median: $0" when the filtered set is empty', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [oddInv1, oddInv2, oddInv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
+
+      expect(screen.getByText('Median (filtered): $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
+    it('shows "Median: $0" when there are no investments at all', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Median: $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+  });
 });

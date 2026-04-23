@@ -43,6 +43,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - List shows how many investments match the current filter — `app/InvestmentsTable.tsx`
 - List shows each investment's notes, truncated with the full text on hover — `app/InvestmentsTable.tsx`
 - List shows the average purchase amount (mean of amount × price) for the currently filtered view — `app/InvestmentsTable.tsx`
+- List shows the median purchase amount (median of amount × price) for the currently filtered view — `app/InvestmentsTable.tsx`
 
 ## Filter
 
