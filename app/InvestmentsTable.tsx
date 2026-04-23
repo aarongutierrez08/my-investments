@@ -27,6 +27,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [toDate, setToDate] = useState<string>('');
   const [minAmount, setMinAmount] = useState<string>('');
   const [maxAmount, setMaxAmount] = useState<string>('');
+  const [onlyWithNotes, setOnlyWithNotes] = useState<boolean>(false);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
@@ -96,6 +97,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       if (maxAmountBound !== null && investment.amount > maxAmountBound) {
         return false;
       }
+      if (onlyWithNotes && (investment.notes ?? '').trim() === '') {
+        return false;
+      }
       return true;
     });
   }, [
@@ -107,6 +111,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     toDate,
     minAmountBound,
     maxAmountBound,
+    onlyWithNotes,
   ]);
 
   const displayedInvestments = useMemo(() => {
@@ -263,7 +268,8 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     fromDate !== '' ||
     toDate !== '' ||
     minAmount !== '' ||
-    maxAmount !== '';
+    maxAmount !== '' ||
+    onlyWithNotes;
 
   const isFiltered =
     categoryFilter !== '' ||
@@ -272,7 +278,8 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     fromDate !== '' ||
     toDate !== '' ||
     minAmountBound !== null ||
-    maxAmountBound !== null;
+    maxAmountBound !== null ||
+    onlyWithNotes;
 
   const totalInvestedLabel = isFiltered ? 'Total invested (filtered)' : 'Total invested';
 
@@ -284,6 +291,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setToDate('');
     setMinAmount('');
     setMaxAmount('');
+    setOnlyWithNotes(false);
   }
 
   const filteredCount = filteredInvestments.length;
@@ -484,6 +492,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             onChange={(event) => setMaxAmount(event.target.value)}
             className="border border-gray-300 rounded px-3 py-2"
           />
+        </div>
+        <div className="flex items-end">
+          <label htmlFor="only-with-notes" className="inline-flex items-center gap-2 text-sm font-medium">
+            <input
+              id="only-with-notes"
+              type="checkbox"
+              checked={onlyWithNotes}
+              onChange={(event) => setOnlyWithNotes(event.target.checked)}
+              className="h-4 w-4"
+            />
+            Only with notes
+          </label>
         </div>
         {hasActiveFilters && (
           <div className="flex items-end">

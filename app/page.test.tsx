@@ -3740,4 +3740,124 @@ describe('HomePage', () => {
       expect(visibleInstruments()).toEqual(['AAPL', 'BTC', 'US10Y']);
     });
   });
+
+  describe('issue #81: filter investments list by notes presence', () => {
+    const invWithNotes = {
+      id: 'inv-with-notes',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2026-03-01',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: 'Bought after earnings call',
+    };
+
+    const invWithEmptyNotes = {
+      id: 'inv-empty-notes',
+      instrument: 'MSFT',
+      amount: 5,
+      price: 100,
+      purchaseDate: '2026-02-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: '',
+    };
+
+    const invWithWhitespaceNotes = {
+      id: 'inv-ws-notes',
+      instrument: 'GOOG',
+      amount: 3,
+      price: 200,
+      purchaseDate: '2026-02-20',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+      notes: '   ',
+    };
+
+    const invWithoutNotes = {
+      id: 'inv-no-notes',
+      instrument: 'BTC',
+      amount: 2,
+      price: 50,
+      purchaseDate: '2026-02-25',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function visibleInstruments() {
+      const table = screen.queryByRole('table');
+      if (!table) {
+        return [] as string[];
+      }
+      const bodyRows = within(table).getAllByRole('row').slice(1);
+      return bodyRows.map((row) => {
+        const firstCell = within(row).getAllByRole('cell')[0];
+        const nameSpan = firstCell.querySelector('span');
+        return nameSpan?.textContent?.trim() ?? '';
+      });
+    }
+
+    it('AC-001: checking "Only with notes" leaves only investments with non-empty notes', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes, invWithEmptyNotes, invWithWhitespaceNotes, invWithoutNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const onlyWithNotes = screen.getByLabelText('Only with notes') as HTMLInputElement;
+      expect(onlyWithNotes.checked).toBe(false);
+      fireEvent.click(onlyWithNotes);
+      expect(onlyWithNotes.checked).toBe(true);
+
+      const instruments = visibleInstruments();
+      expect(instruments).toEqual(['AAPL']);
+    });
+
+    it('AC-002: "Clear filters" also unchecks "Only with notes" and restores all rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes, invWithEmptyNotes, invWithoutNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const onlyWithNotes = screen.getByLabelText('Only with notes') as HTMLInputElement;
+      fireEvent.click(onlyWithNotes);
+      expect(onlyWithNotes.checked).toBe(true);
+      expect(visibleInstruments()).toEqual(['AAPL']);
+
+      const clearButton = screen.getByRole('button', { name: /clear filters/i });
+      fireEvent.click(clearButton);
+
+      expect(onlyWithNotes.checked).toBe(false);
+      const instruments = visibleInstruments();
+      expect(instruments).toContain('AAPL');
+      expect(instruments).toContain('MSFT');
+      expect(instruments).toContain('BTC');
+    });
+
+    it('AC-003: totals and match count reflect the filtered set when "Only with notes" is on', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invWithNotes, invWithEmptyNotes, invWithoutNotes],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const onlyWithNotes = screen.getByLabelText('Only with notes') as HTMLInputElement;
+      fireEvent.click(onlyWithNotes);
+
+      expect(screen.getByText(/showing 1 investment/i)).toBeInTheDocument();
+      expect(screen.getByText('Total invested (filtered): $10')).toBeInTheDocument();
+    });
+  });
 });
