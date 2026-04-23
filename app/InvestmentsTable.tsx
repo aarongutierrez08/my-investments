@@ -64,7 +64,10 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         const labelMatches = (investment.labels ?? []).some((label) =>
           label.toLowerCase().includes(trimmedSearch),
         );
-        if (!nameMatches && !labelMatches) {
+        const notesMatches = (investment.notes ?? '')
+          .toLowerCase()
+          .includes(trimmedSearch);
+        if (!nameMatches && !labelMatches && !notesMatches) {
           return false;
         }
       }
@@ -280,7 +283,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             type="text"
             value={nameSearch}
             onChange={(event) => setNameSearch(event.target.value)}
-            placeholder="Search by name or label"
+            placeholder="Search by name, label or notes"
             className="border border-gray-300 rounded px-3 py-2"
           />
         </div>
