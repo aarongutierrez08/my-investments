@@ -54,6 +54,10 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can clear all active filters at once with a single "Clear filters" button — `app/InvestmentsTable.tsx`
 - Users can toggle an "Only with notes" filter to show only investments whose notes are non-empty — `app/InvestmentsTable.tsx`
 
+## Export
+
+- Users can export the currently shown investments list to a CSV file named `investments.csv` — `app/InvestmentsTable.tsx`
+
 ## Sort
 
 - Investments are sorted by purchase amount descending by default — `app/InvestmentsTable.tsx`

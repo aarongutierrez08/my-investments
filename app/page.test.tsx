@@ -3860,4 +3860,158 @@ describe('HomePage', () => {
       expect(screen.getByText('Total invested (filtered): $10')).toBeInTheDocument();
     });
   });
+
+  describe('issue #83: export the currently shown investments list to CSV', () => {
+    const invAAPL = {
+      id: 'inv-aapl',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2023-01-15',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invMSFT = {
+      id: 'inv-msft',
+      instrument: 'MSFT',
+      amount: 5,
+      price: 300,
+      purchaseDate: '2023-02-10',
+      category: 'Stocks',
+      labelIds: [],
+      labels: [],
+    };
+    const invBTC = {
+      id: 'inv-btc',
+      instrument: 'BTC',
+      amount: 1,
+      price: 30000,
+      purchaseDate: '2023-03-20',
+      category: 'Crypto',
+      labelIds: [],
+      labels: [],
+    };
+
+    function installBlobCapture() {
+      const captured: { blob: Blob | null } = { blob: null };
+      const createSpy = vi.fn((blob: Blob) => {
+        captured.blob = blob;
+        return 'blob:mock-url';
+      });
+      const revokeSpy = vi.fn();
+      vi.stubGlobal('URL', {
+        ...URL,
+        createObjectURL: createSpy,
+        revokeObjectURL: revokeSpy,
+      });
+      return { captured, createSpy, revokeSpy };
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('AC-001: renders an Export CSV button alongside the filter controls', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invAAPL, invBTC],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const button = screen.getByRole('button', { name: /export csv/i });
+      expect(button).toBeInTheDocument();
+      expect(button).not.toBeDisabled();
+    });
+
+    it('AC-002: clicking Export CSV downloads a file named investments.csv containing only the filtered rows in the displayed order', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invAAPL, invMSFT, invBTC],
+        labels: [],
+      });
+
+      const { captured, createSpy, revokeSpy } = installBlobCapture();
+
+      const anchor = document.createElement('a');
+      const clickSpy = vi.fn();
+      anchor.click = clickSpy;
+      const originalCreateElement = document.createElement.bind(document);
+      const createElementSpy = vi
+        .spyOn(document, 'createElement')
+        .mockImplementation((tag: string) => {
+          if (tag === 'a') return anchor;
+          return originalCreateElement(tag);
+        });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const categorySelect = screen.getByRole('combobox', {
+        name: /filter by category/i,
+      }) as HTMLSelectElement;
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      const sortNameButton = screen.getByRole('button', { name: /sort by name/i });
+      fireEvent.click(sortNameButton);
+
+      const exportButton = screen.getByRole('button', { name: /export csv/i });
+      fireEvent.click(exportButton);
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(anchor.getAttribute('download')).toBe('investments.csv');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(revokeSpy).toHaveBeenCalledWith('blob:mock-url');
+
+      expect(captured.blob).not.toBeNull();
+      expect(captured.blob?.type).toContain('text/csv');
+
+      const csvText = await captured.blob!.text();
+      const lines = csvText.split('\n');
+      expect(lines[0]).toBe('name,category,amount,price,purchaseDate,labels,notes');
+      expect(lines).toHaveLength(3);
+      expect(lines[1].startsWith('AAPL,')).toBe(true);
+      expect(lines[2].startsWith('MSFT,')).toBe(true);
+      expect(csvText).not.toContain('BTC');
+
+      createElementSpy.mockRestore();
+    });
+
+    it('AC-003: clicking Export CSV with an empty filtered list still produces a CSV with only the header row', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invAAPL, invBTC],
+        labels: [],
+      });
+
+      const { captured } = installBlobCapture();
+
+      const anchor = document.createElement('a');
+      anchor.click = vi.fn();
+      const originalCreateElement = document.createElement.bind(document);
+      const createElementSpy = vi
+        .spyOn(document, 'createElement')
+        .mockImplementation((tag: string) => {
+          if (tag === 'a') return anchor;
+          return originalCreateElement(tag);
+        });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByPlaceholderText(
+        'Search by name, label or notes',
+      ) as HTMLInputElement;
+      fireEvent.change(search, { target: { value: 'no-such-instrument-zzz' } });
+
+      const exportButton = screen.getByRole('button', { name: /export csv/i });
+      expect(exportButton).not.toBeDisabled();
+      fireEvent.click(exportButton);
+
+      const csvText = await captured.blob!.text();
+      expect(csvText).toBe('name,category,amount,price,purchaseDate,labels,notes');
+
+      createElementSpy.mockRestore();
+    });
+  });
 });
