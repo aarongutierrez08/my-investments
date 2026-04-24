@@ -4413,6 +4413,162 @@ describe('HomePage', () => {
     });
   });
 
+  describe('totals by purchase month', () => {
+    it('AC-001: shows one row per month with the correct summed amount', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 10,
+            price: 5,
+            purchaseDate: '2025-03-15',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 2,
+            price: 100,
+            purchaseDate: '2025-03-20',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i3',
+            instrument: 'C',
+            amount: 3,
+            price: 20,
+            purchaseDate: '2025-04-10',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /total invested per month/i });
+      const section = heading.closest('section') as HTMLElement;
+      expect(section).not.toBeNull();
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0]).toHaveTextContent('2025-04: $60');
+      expect(items[1]).toHaveTextContent('2025-03: $250');
+    });
+
+    it('AC-002: per-month totals reflect only the filtered investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 10,
+            price: 5,
+            purchaseDate: '2025-03-15',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 3,
+            price: 20,
+            purchaseDate: '2025-04-10',
+            category: 'Crypto',
+            labelIds: [],
+          },
+          {
+            id: 'i3',
+            instrument: 'C',
+            amount: 1,
+            price: 40,
+            purchaseDate: '2025-04-25',
+            category: 'Crypto',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Stocks' } });
+
+      const heading = screen.getByRole('heading', { name: /total invested per month/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(1);
+      expect(items[0]).toHaveTextContent('2025-03: $50');
+      expect(within(section).queryByText(/2025-04/)).not.toBeInTheDocument();
+    });
+
+    it('AC-003: months appear in descending order (newest first)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 1,
+            price: 10,
+            purchaseDate: '2023-01-05',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 2,
+            price: 10,
+            purchaseDate: '2025-06-10',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i3',
+            instrument: 'C',
+            amount: 3,
+            price: 10,
+            purchaseDate: '2024-03-07',
+            category: 'Stocks',
+            labelIds: [],
+          },
+          {
+            id: 'i4',
+            instrument: 'D',
+            amount: 4,
+            price: 10,
+            purchaseDate: '2022-11-30',
+            category: 'Stocks',
+            labelIds: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /total invested per month/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items.map((i) => i.textContent)).toEqual([
+        '2025-06: $20',
+        '2024-03: $30',
+        '2023-01: $10',
+        '2022-11: $40',
+      ]);
+    });
+  });
+
   describe('issue #87: sort investments list by notes presence', () => {
     const invWithNotes1 = {
       id: 'inv-with-1',
