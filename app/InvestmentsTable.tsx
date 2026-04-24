@@ -136,13 +136,11 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         const aDate = a.purchaseDate || '';
         const bDate = b.purchaseDate || '';
         if (aDate === bDate) return 0;
-        if (dateSortDirection === 'asc') {
-          if (aDate === '') return -1;
-          if (bDate === '') return 1;
-          return aDate < bDate ? -1 : 1;
-        }
         if (aDate === '') return 1;
         if (bDate === '') return -1;
+        if (dateSortDirection === 'asc') {
+          return aDate < bDate ? -1 : 1;
+        }
         return aDate < bDate ? 1 : -1;
       });
       return sorted;

@@ -1658,7 +1658,7 @@ describe('HomePage', () => {
       expect(visibleInstruments()).toEqual(['AAPL', 'TSLA', 'GOOG', 'MSFT']);
     });
 
-    it('AC-003: places investments without a purchase date at the top when sorting oldest first', async () => {
+    it('AC-003 (#98): places investments without a purchase date at the bottom when sorting oldest first', async () => {
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({
         investments: [invOldDate, invNewDate, invNoDate, invMidDate],
         labels: [],
@@ -1671,7 +1671,76 @@ describe('HomePage', () => {
       fireEvent.click(sortDateButton);
       fireEvent.click(sortDateButton);
 
-      expect(visibleInstruments()).toEqual(['MSFT', 'GOOG', 'TSLA', 'AAPL']);
+      expect(visibleInstruments()).toEqual(['GOOG', 'TSLA', 'AAPL', 'MSFT']);
+    });
+
+    it('AC-002 (#98): sorts dated rows ascending when oldest-first is selected', async () => {
+      const inv2023 = {
+        id: 'inv-2023',
+        instrument: 'BBB',
+        amount: 10,
+        price: 1,
+        purchaseDate: '2023-05-01',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const inv2021 = {
+        id: 'inv-2021',
+        instrument: 'AAA',
+        amount: 10,
+        price: 1,
+        purchaseDate: '2021-01-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+      const inv2024 = {
+        id: 'inv-2024',
+        instrument: 'CCC',
+        amount: 10,
+        price: 1,
+        purchaseDate: '2024-10-10',
+        category: 'Stocks',
+        labelIds: [],
+        labels: [],
+      };
+
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv2023, inv2021, inv2024],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+      fireEvent.click(sortDateButton);
+
+      expect(visibleInstruments()).toEqual(['AAA', 'BBB', 'CCC']);
+    });
+
+    it('AC-003 (#98): switching from oldest-first back to default amount sort restores amount descending order', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [invOldDate, invNewDate, invMidDate],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(visibleInstruments()).toEqual(['TSLA', 'GOOG', 'AAPL']);
+
+      const sortDateButton = screen.getByRole('button', { name: /sort by date/i });
+      fireEvent.click(sortDateButton);
+      fireEvent.click(sortDateButton);
+      expect(visibleInstruments()).toEqual(['GOOG', 'TSLA', 'AAPL']);
+
+      const sortAmountButton = screen.getByRole('button', { name: /sort by amount/i });
+      fireEvent.click(sortAmountButton);
+
+      expect(visibleInstruments()).toEqual(['TSLA', 'GOOG', 'AAPL']);
     });
 
     it('AC-004: amount sort still works after the date sort options are introduced (regression)', async () => {
