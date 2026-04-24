@@ -24,6 +24,10 @@ function hasNotes(investment: Investment): boolean {
   return (investment.notes ?? '').trim() !== '';
 }
 
+function investmentCountSuffix(count: number): string {
+  return ` · ${count} ${count === 1 ? 'investment' : 'investments'}`;
+}
+
 const UNCATEGORIZED = 'Uncategorized';
 
 export function InvestmentsTable({ investments, labels: labelsData }: InvestmentsTableProps) {
@@ -381,10 +385,14 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   }, [filteredInvestments]);
 
   const labelBreakdown = useMemo(() => {
-    const breakdown = new Map<string, number>();
+    const breakdown = new Map<string, { total: number; count: number }>();
     for (const investment of filteredInvestments) {
       for (const label of investment.labels ?? []) {
-        breakdown.set(label, (breakdown.get(label) ?? 0) + investment.amount);
+        const existing = breakdown.get(label) ?? { total: 0, count: 0 };
+        breakdown.set(label, {
+          total: existing.total + investment.amount,
+          count: existing.count + 1,
+        });
       }
     }
     return new Map(
@@ -518,8 +526,11 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                 totalInvested > 0
                   ? ` (${Math.round((total / totalInvested) * 100)}%)`
                   : '';
-              const countSuffix = ` · ${count} ${count === 1 ? 'investment' : 'investments'}`;
-              return <li key={name}>{`${name}: $${total}${percentSuffix}${countSuffix}`}</li>;
+              return (
+                <li key={name}>
+                  {`${name}: $${total}${percentSuffix}${investmentCountSuffix(count)}`}
+                </li>
+              );
             })}
           </ul>
         </section>
@@ -530,8 +541,8 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             Totals by label
           </h2>
           <ul className="list-disc list-inside">
-            {Array.from(labelBreakdown.entries()).map(([name, total]) => (
-              <li key={name}>{`${name}: $${total}`}</li>
+            {Array.from(labelBreakdown.entries()).map(([name, { total, count }]) => (
+              <li key={name}>{`${name}: $${total}${investmentCountSuffix(count)}`}</li>
             ))}
           </ul>
         </section>

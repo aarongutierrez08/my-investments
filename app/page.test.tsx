@@ -3450,6 +3450,155 @@ describe('HomePage', () => {
     });
   });
 
+  describe('issue #106: investment count per custom label', () => {
+    function labelSection() {
+      const heading = screen.getByRole('heading', { name: /totals by label/i });
+      const section = heading.closest('section');
+      if (!section) throw new Error('Totals by label section not found');
+      return section as HTMLElement;
+    }
+
+    it('AC-001: each label row shows the count of investments carrying that label with singular/plural wording', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'BTC',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Crypto',
+            labelIds: [],
+            labels: ['Crypto'],
+          },
+          {
+            id: 'i2',
+            instrument: 'ETH',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Crypto',
+            labelIds: [],
+            labels: ['Crypto'],
+          },
+          {
+            id: 'i3',
+            instrument: 'SOL',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            category: 'Crypto',
+            labelIds: [],
+            labels: ['Crypto'],
+          },
+          {
+            id: 'i4',
+            instrument: 'BOND',
+            amount: 400,
+            price: 1,
+            purchaseDate: '2023-01-04',
+            category: 'Bonds',
+            labelIds: [],
+            labels: ['Bonds'],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const section = labelSection();
+      expect(within(section).getByText(/^Crypto: .*· 3 investments$/)).toBeInTheDocument();
+      expect(within(section).getByText(/^Bonds: .*· 1 investment$/)).toBeInTheDocument();
+      expect(within(section).queryByText(/^Bonds: .*· 1 investments$/)).not.toBeInTheDocument();
+    });
+
+    it('AC-002: per-label counts reflect the currently active category filter', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['LongTerm'],
+          },
+          {
+            id: 'i2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['LongTerm'],
+          },
+          {
+            id: 'i3',
+            instrument: 'BTC',
+            amount: 300,
+            price: 1,
+            purchaseDate: '2023-01-03',
+            category: 'Crypto',
+            labelIds: [],
+            labels: ['LongTerm'],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(within(labelSection()).getByText(/^LongTerm: .*· 3 investments$/)).toBeInTheDocument();
+
+      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
+
+      expect(within(labelSection()).getByText(/^LongTerm: .*· 2 investments$/)).toBeInTheDocument();
+      expect(within(labelSection()).queryByText(/^LongTerm: .*· 3 investments$/)).not.toBeInTheDocument();
+    });
+
+    it('AC-003: an investment carrying multiple labels contributes one to each label count', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'AAPL',
+            amount: 100,
+            price: 1,
+            purchaseDate: '2023-01-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['Crypto', 'LongTerm'],
+          },
+          {
+            id: 'i2',
+            instrument: 'GOOG',
+            amount: 200,
+            price: 1,
+            purchaseDate: '2023-01-02',
+            category: 'Stocks',
+            labelIds: [],
+            labels: ['LongTerm'],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const section = labelSection();
+      expect(within(section).getByText(/^Crypto: .*· 1 investment$/)).toBeInTheDocument();
+      expect(within(section).getByText(/^LongTerm: .*· 2 investments$/)).toBeInTheDocument();
+    });
+  });
+
   describe('issue #68: search investments by notes content', () => {
     const invWithBonus = {
       id: 'inv-bonus',
