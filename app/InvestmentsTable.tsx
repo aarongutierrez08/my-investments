@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Category, Investment, Label } from '../lib/types';
 import { buildInvestmentsCsv } from '../lib/csv';
-import { minPurchaseAmount, maxPurchaseAmount } from '../lib/purchaseAmount';
+import {
+  minPurchaseAmount,
+  maxPurchaseAmount,
+  standardDeviation,
+} from '../lib/purchaseAmount';
 
 interface InvestmentsTableProps {
   investments: Investment[];
@@ -320,6 +324,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   const minInvested = minPurchaseAmount(filteredInvestments);
   const maxInvested = maxPurchaseAmount(filteredInvestments);
+  const stdDevInvested = standardDeviation(filteredInvestments);
 
   const hasActiveFilters =
     categoryFilter !== '' ||
@@ -346,6 +351,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const medianLabel = isFiltered ? 'Median (filtered)' : 'Median';
   const minLabel = isFiltered ? 'Min purchase amount (filtered)' : 'Min purchase amount';
   const maxLabel = isFiltered ? 'Max purchase amount (filtered)' : 'Max purchase amount';
+  const stdDevLabel = isFiltered ? 'Standard deviation (filtered)' : 'Standard deviation';
 
   function clearFilters() {
     setCategoryFilter('');
@@ -452,6 +458,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
         <p className="mb-4 text-lg font-semibold">
           {maxLabel}: ${maxInvested}
         </p>
+        <p className="mb-4 text-lg font-semibold">
+          {stdDevLabel}: ${stdDevInvested}
+        </p>
         <p className="text-center text-gray-500">No investments yet. Add your first one.</p>
       </>
     );
@@ -479,6 +488,9 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       </p>
       <p className="mb-4 text-lg font-semibold">
         {maxLabel}: ${maxInvested}
+      </p>
+      <p className="mb-4 text-lg font-semibold">
+        {stdDevLabel}: ${stdDevInvested}
       </p>
       {categoryBreakdown.size > 0 && (
         <section aria-labelledby="total-by-category-heading" className="mb-6">

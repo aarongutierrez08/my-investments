@@ -46,6 +46,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - List shows the average purchase amount (mean of amount × price) for the currently filtered view — `app/InvestmentsTable.tsx`
 - List shows the median purchase amount (median of amount × price) for the currently filtered view — `app/InvestmentsTable.tsx`
 - List shows the min and max purchase amount (min/max of amount × price) for the currently filtered view — `app/InvestmentsTable.tsx`
+- List shows the population standard deviation of purchase amounts (amount × price) for the currently filtered view — `app/InvestmentsTable.tsx`
 
 ## Filter
 

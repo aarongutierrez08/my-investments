@@ -4955,4 +4955,97 @@ describe('HomePage', () => {
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     });
   });
+
+  describe('standard deviation summary', () => {
+    const inv1 = {
+      id: 'sd1',
+      instrument: 'AAPL',
+      amount: 10,
+      price: 10,
+      purchaseDate: '2023-01-01',
+      category: 'Stocks',
+      labelIds: [],
+    };
+    const inv2 = {
+      id: 'sd2',
+      instrument: 'BTC',
+      amount: 20,
+      price: 10,
+      purchaseDate: '2023-01-02',
+      category: 'Crypto',
+      labelIds: [],
+    };
+    const inv3 = {
+      id: 'sd3',
+      instrument: 'US10Y',
+      amount: 30,
+      price: 10,
+      purchaseDate: '2023-01-03',
+      category: 'Bonds',
+      labelIds: [],
+    };
+
+    it('AC-001: shows the population standard deviation of amount * price across all investments when no filter is active', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const expected = Math.sqrt(((100 - 200) ** 2 + 0 + (300 - 200) ** 2) / 3);
+      expect(
+        screen.getByText(`Standard deviation: $${expected}`),
+      ).toBeInTheDocument();
+    });
+
+    it('AC-002: updates the standard deviation when a filter narrows the visible rows', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const select = screen.getByRole('combobox', { name: /filter by category/i });
+      fireEvent.change(select, { target: { value: 'Crypto' } });
+
+      expect(
+        screen.getByText('Standard deviation (filtered): $0'),
+      ).toBeInTheDocument();
+    });
+
+    it('AC-003: shows "$0" without "NaN" when the active filter matches zero investments', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [inv1, inv2, inv3],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const search = screen.getByLabelText(/search by name/i);
+      fireEvent.change(search, { target: { value: 'no-such-instrument' } });
+
+      expect(
+        screen.getByText('Standard deviation (filtered): $0'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+
+    it('shows "Standard deviation: $0" when there are no investments at all', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(screen.getByText('Standard deviation: $0')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+  });
 });
