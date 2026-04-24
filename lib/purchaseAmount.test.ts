@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { minPurchaseAmount, maxPurchaseAmount } from './purchaseAmount';
+import {
+  minPurchaseAmount,
+  maxPurchaseAmount,
+  standardDeviation,
+} from './purchaseAmount';
 import type { Investment } from './types';
 
 function makeInvestment(amount: number, price: number): Investment {
@@ -72,5 +76,35 @@ describe('maxPurchaseAmount', () => {
     ];
 
     expect(maxPurchaseAmount(investments)).toBe(100);
+  });
+});
+
+describe('standardDeviation', () => {
+  it('returns 0 for an empty list', () => {
+    expect(standardDeviation([])).toBe(0);
+  });
+
+  it('returns 0 when only one investment is given', () => {
+    expect(standardDeviation([makeInvestment(4, 25)])).toBe(0);
+  });
+
+  it('returns the population standard deviation of amount * price for multiple investments', () => {
+    const investments = [
+      makeInvestment(100, 1),
+      makeInvestment(200, 1),
+      makeInvestment(300, 1),
+    ];
+
+    expect(standardDeviation(investments)).toBeCloseTo(81.6497, 4);
+  });
+
+  it('returns 0 when all purchase amounts are identical', () => {
+    const investments = [
+      makeInvestment(10, 5),
+      makeInvestment(5, 10),
+      makeInvestment(25, 2),
+    ];
+
+    expect(standardDeviation(investments)).toBe(0);
   });
 });
