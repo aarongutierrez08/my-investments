@@ -15,7 +15,7 @@ Completion criteria:
 ---
 
 ## Stage 1.5 — Foundation (persistencia real, scaffolding)
-Status: active
+Status: complete
 Goal: Preparar el terreno para migrar de JSON a Supabase en modo local-first. Esta etapa entrega docs + scaffolding únicamente. Ninguna feature existente se mueve a Supabase todavía.
 
 Completion criteria:
@@ -35,7 +35,7 @@ Anti-priorities:
 ---
 
 ## Stage 2 — Persistencia sin auth (single-user sobre Supabase)
-Status: pending
+Status: active
 Goal: Reemplazar el JSON storage por Supabase. La app sigue single-user (sin login aún). Todas las features existentes siguen funcionando pero ahora los datos viven en Postgres.
 
 Completion criteria:
