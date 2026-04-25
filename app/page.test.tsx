@@ -4517,10 +4517,10 @@ describe('HomePage', () => {
 
       const items = within(section).getAllByRole('listitem');
       expect(items.map((i) => i.textContent)).toEqual([
-        '2024: $20',
-        '2023: $40',
-        '2022: $30',
-        '2021: $10',
+        '2024: $20 (20.0%)',
+        '2023: $40 (40.0%)',
+        '2022: $30 (30.0%)',
+        '2021: $10 (10.0%)',
       ]);
     });
 
@@ -4559,6 +4559,91 @@ describe('HomePage', () => {
       expect(items).toHaveLength(1);
       expect(items[0]).toHaveTextContent('2024: $100');
       expect(within(section).queryByText(/unknown/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("issue #108: each year's share of the portfolio", () => {
+    it('AC-001: each per-year total line shows its percentage of the portfolio with one decimal', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 10000,
+            price: 1,
+            purchaseDate: '2023-06-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+          {
+            id: 'i2',
+            instrument: 'B',
+            amount: 5000,
+            price: 1,
+            purchaseDate: '2024-02-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /totals by year/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+      expect(items[0]).toHaveTextContent('2024: $5000 (33.3%)');
+      expect(items[1]).toHaveTextContent('2023: $10000 (66.7%)');
+    });
+
+    it('AC-002: empty portfolio shows no per-year rows and no NaN% or Infinity% anywhere', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      expect(
+        screen.queryByRole('heading', { name: /totals by year/i }),
+      ).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/NaN%/);
+      expect(document.body.textContent).not.toMatch(/Infinity%/);
+    });
+
+    it('AC-003: a single investment renders its year at (100.0%)', async () => {
+      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+        investments: [
+          {
+            id: 'i1',
+            instrument: 'A',
+            amount: 777,
+            price: 1,
+            purchaseDate: '2024-06-01',
+            category: 'Stocks',
+            labelIds: [],
+            labels: [],
+          },
+        ],
+        labels: [],
+      });
+
+      const Resolved = await HomePage();
+      render(Resolved);
+
+      const heading = screen.getByRole('heading', { name: /totals by year/i });
+      const section = heading.closest('section') as HTMLElement;
+
+      const items = within(section).getAllByRole('listitem');
+      expect(items).toHaveLength(1);
+      expect(items[0]).toHaveTextContent('2024: $777 (100.0%)');
     });
   });
 
