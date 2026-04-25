@@ -19,7 +19,7 @@ export interface Investment {
   purchaseDate: string; // ISO date string
   category: Category;
   labelIds: string[]; // array of references to Label.id
-  labels: string[]; // free-text custom tags
+  labels?: string[]; // legacy free-text tags — being removed; new Supabase storage path does not persist this
   notes?: string; // optional string
 }
 

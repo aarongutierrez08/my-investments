@@ -120,7 +120,6 @@ function dbRow(overrides: Partial<Row> = {}): Row {
     category: 'Stocks',
     purchase_date: '2026-01-15',
     notes: null,
-    labels: [],
     ...overrides,
   };
 }
@@ -174,12 +173,6 @@ describe('lib/investments/storage', () => {
       const [investment] = await listInvestments(client);
       expect(investment.notes).toBe('hello');
     });
-
-    it('preserves the free-text labels array stored on the row', async () => {
-      db.investments.push(dbRow({ labels: ['long-term', 'tech'] }));
-      const [investment] = await listInvestments(client);
-      expect(investment.labels).toEqual(['long-term', 'tech']);
-    });
   });
 
   describe('getInvestment', () => {
@@ -208,7 +201,6 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: [],
-        labels: [],
       };
 
       const created = await createInvestment(investment, client);
@@ -228,7 +220,6 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: ['lbl-a', 'lbl-b'],
-        labels: [],
       };
 
       await createInvestment(investment, client);
@@ -248,7 +239,6 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: [],
-        labels: [],
       };
 
       await createInvestment(investment, client);
@@ -265,30 +255,12 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: [],
-        labels: [],
       };
 
       const created = await createInvestment(investment, client);
 
       expect(created.amount).toBe(0.1);
       expect(created.price).toBe(0.2);
-    });
-
-    it('persists the free-text labels array', async () => {
-      const investment: Investment = {
-        id: 'inv-1',
-        instrument: 'AAPL',
-        amount: 10,
-        price: 150,
-        purchaseDate: '2026-01-15',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['long-term', 'tech'],
-      };
-
-      await createInvestment(investment, client);
-
-      expect(db.investments[0].labels).toEqual(['long-term', 'tech']);
     });
   });
 
