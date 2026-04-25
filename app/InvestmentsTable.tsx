@@ -412,6 +412,11 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     return Array.from(breakdown.entries()).sort(([a], [b]) => b.localeCompare(a));
   }, [filteredInvestments]);
 
+  const portfolioTotal = useMemo(
+    () => investments.reduce((sum, investment) => sum + investment.amount, 0),
+    [investments],
+  );
+
   const monthBreakdown = useMemo(() => {
     const breakdown = new Map<string, number>();
     for (const investment of filteredInvestments) {
@@ -553,9 +558,13 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             Totals by year
           </h2>
           <ul className="list-disc list-inside">
-            {yearBreakdown.map(([year, total]) => (
-              <li key={year}>{`${year}: $${total}`}</li>
-            ))}
+            {yearBreakdown.map(([year, total]) => {
+              const percent =
+                portfolioTotal > 0 ? (total / portfolioTotal) * 100 : 0;
+              return (
+                <li key={year}>{`${year}: $${total} (${percent.toFixed(1)}%)`}</li>
+              );
+            })}
           </ul>
         </section>
       )}

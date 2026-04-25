@@ -40,6 +40,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - List shows total invested per purchase year (descending), reflecting the current filter — `app/InvestmentsTable.tsx`
 - List shows total invested per purchase month in YYYY-MM format (descending), reflecting the current filter — `app/InvestmentsTable.tsx`
 - List shows each category's percentage of the total portfolio — `app/InvestmentsTable.tsx`
+- List shows each purchase year's percentage of the total portfolio (one decimal place) — `app/InvestmentsTable.tsx`
 - List shows the count of investments per category, respecting the current filter (singular/plural wording) — `app/InvestmentsTable.tsx`
 - List shows the count of investments per custom label, respecting the current filter (singular/plural wording) — `app/InvestmentsTable.tsx`
 - List shows total invested for the currently filtered view — `app/InvestmentsTable.tsx`
