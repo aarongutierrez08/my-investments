@@ -8,3 +8,4 @@ dist/
 coverage/
 .next/
 tsconfig.tsbuildinfo
+.nw/
