@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { storage } from '../../../lib/storage';
+import { createInvestment } from '../../../lib/investments/storage';
 import { investmentSchema } from './schema';
 import type { Investment } from '../../../lib/types';
 
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
   };
 
-  await storage.addInvestment(investment);
+  const created = await createInvestment(investment);
 
-  return NextResponse.json(investment, { status: 201 });
+  return NextResponse.json(created, { status: 201 });
 }

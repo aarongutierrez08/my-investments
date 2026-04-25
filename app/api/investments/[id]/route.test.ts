@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DELETE, PUT } from './route';
-import { storage } from '../../../../lib/storage';
+import {
+  deleteInvestment,
+  updateInvestment,
+} from '../../../../lib/investments/storage';
 import type { Investment } from '../../../../lib/types';
 
-vi.mock('../../../../lib/storage', () => ({
-  storage: {
-    deleteInvestment: vi.fn(),
-    updateInvestment: vi.fn(),
-  },
+vi.mock('../../../../lib/investments/storage', () => ({
+  deleteInvestment: vi.fn(),
+  updateInvestment: vi.fn(),
 }));
 
 function makeRequest(id: string): Request {
@@ -34,28 +35,28 @@ describe('DELETE /api/investments/[id]', () => {
   });
 
   it('returns 204 and removes the investment on success', async () => {
-    (storage.deleteInvestment as unknown as vi.Mock).mockResolvedValue(undefined);
+    (deleteInvestment as unknown as vi.Mock).mockResolvedValue(undefined);
 
     const response = await DELETE(makeRequest('inv-001'), makeContext('inv-001'));
 
     expect(response.status).toBe(204);
-    expect(storage.deleteInvestment).toHaveBeenCalledTimes(1);
-    expect(storage.deleteInvestment).toHaveBeenCalledWith('inv-001');
+    expect(deleteInvestment).toHaveBeenCalledTimes(1);
+    expect(deleteInvestment).toHaveBeenCalledWith('inv-001');
   });
 
   it('returns 404 when the id is unknown', async () => {
-    (storage.deleteInvestment as unknown as vi.Mock).mockRejectedValue(
+    (deleteInvestment as unknown as vi.Mock).mockRejectedValue(
       new Error('Investment with id "missing" not found.'),
     );
 
     const response = await DELETE(makeRequest('missing'), makeContext('missing'));
 
     expect(response.status).toBe(404);
-    expect(storage.deleteInvestment).toHaveBeenCalledWith('missing');
+    expect(deleteInvestment).toHaveBeenCalledWith('missing');
   });
 
   it('returns 500 on unexpected errors', async () => {
-    (storage.deleteInvestment as unknown as vi.Mock).mockRejectedValue(
+    (deleteInvestment as unknown as vi.Mock).mockRejectedValue(
       new Error('disk on fire'),
     );
 
@@ -82,7 +83,7 @@ describe('PUT /api/investments/[id]', () => {
 
   it('returns 200 and the updated investment on success', async () => {
     const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
       makePutRequest('inv-001', validPayload),
@@ -92,12 +93,12 @@ describe('PUT /api/investments/[id]', () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as Investment;
     expect(body).toEqual(updated);
-    expect(storage.updateInvestment).toHaveBeenCalledTimes(1);
-    expect(storage.updateInvestment).toHaveBeenCalledWith('inv-001', validPayload);
+    expect(updateInvestment).toHaveBeenCalledTimes(1);
+    expect(updateInvestment).toHaveBeenCalledWith('inv-001', validPayload);
   });
 
   it('returns 404 when the id does not exist', async () => {
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(null);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(null);
 
     const response = await PUT(
       makePutRequest('missing', validPayload),
@@ -126,7 +127,7 @@ describe('PUT /api/investments/[id]', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when amount is not positive', async () => {
@@ -136,7 +137,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when category is missing', async () => {
@@ -148,7 +149,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when category is not in CATEGORIES', async () => {
@@ -158,7 +159,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('updates the category when a valid one is provided', async () => {
@@ -168,7 +169,7 @@ describe('PUT /api/investments/[id]', () => {
       ...validPayload,
       category: 'Crypto',
     };
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
       makePutRequest('inv-001', { ...validPayload, category: 'Crypto' }),
@@ -176,7 +177,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(storage.updateInvestment).toHaveBeenCalledWith(
+    expect(updateInvestment).toHaveBeenCalledWith(
       'inv-001',
       expect.objectContaining({ category: 'Crypto' }),
     );
@@ -192,7 +193,7 @@ describe('PUT /api/investments/[id]', () => {
     const response = await PUT(request, makeContext('inv-001'));
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('persists a new labels array on update', async () => {
@@ -201,7 +202,7 @@ describe('PUT /api/investments/[id]', () => {
       ...validPayload,
       labels: ['crypto', 'long-term'],
     };
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
       makePutRequest('inv-001', { ...validPayload, labels: ['crypto', 'long-term'] }),
@@ -209,7 +210,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(storage.updateInvestment).toHaveBeenCalledWith(
+    expect(updateInvestment).toHaveBeenCalledWith(
       'inv-001',
       expect.objectContaining({ labels: ['crypto', 'long-term'] }),
     );
@@ -219,7 +220,7 @@ describe('PUT /api/investments/[id]', () => {
   });
 
   it('trims whitespace and dedupes labels on update', async () => {
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue({
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue({
       id: 'inv-001',
       ...validPayload,
       labels: ['crypto', 'long-term'],
@@ -233,7 +234,7 @@ describe('PUT /api/investments/[id]', () => {
       makeContext('inv-001'),
     );
 
-    expect(storage.updateInvestment).toHaveBeenCalledWith(
+    expect(updateInvestment).toHaveBeenCalledWith(
       'inv-001',
       expect.objectContaining({ labels: ['crypto', 'long-term'] }),
     );
@@ -246,7 +247,7 @@ describe('PUT /api/investments/[id]', () => {
       ...validPayload,
       purchaseDate: '2024-06-30',
     };
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
       makePutRequest('inv-001', { ...validPayload, purchaseDate: '2024-06-30' }),
@@ -254,7 +255,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(storage.updateInvestment).toHaveBeenCalledWith(
+    expect(updateInvestment).toHaveBeenCalledWith(
       'inv-001',
       expect.objectContaining({ purchaseDate: '2024-06-30' }),
     );
@@ -270,7 +271,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when purchaseDate is malformed', async () => {
@@ -280,7 +281,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when purchaseDate has impossible month/day values', async () => {
@@ -290,7 +291,7 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(400);
-    expect(storage.updateInvestment).not.toHaveBeenCalled();
+    expect(updateInvestment).not.toHaveBeenCalled();
   });
 
   it('clears the stored notes when the payload notes field is an empty string', async () => {
@@ -300,7 +301,7 @@ describe('PUT /api/investments/[id]', () => {
       ...validPayload,
       notes: undefined,
     };
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
       makePutRequest('inv-001', { ...validPayload, notes: '' }),
@@ -308,20 +309,20 @@ describe('PUT /api/investments/[id]', () => {
     );
 
     expect(response.status).toBe(200);
-    const patch = (storage.updateInvestment as unknown as vi.Mock).mock.calls[0][1];
+    const patch = (updateInvestment as unknown as vi.Mock).mock.calls[0][1];
     expect('notes' in patch).toBe(true);
     expect(patch.notes).toBeUndefined();
   });
 
   it('ignores a client-provided id in the payload', async () => {
     const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
-    (storage.updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
+    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     await PUT(
       makePutRequest('inv-001', { ...validPayload, id: 'attacker-id' }),
       makeContext('inv-001'),
     );
 
-    expect(storage.updateInvestment).toHaveBeenCalledWith('inv-001', validPayload);
+    expect(updateInvestment).toHaveBeenCalledWith('inv-001', validPayload);
   });
 });

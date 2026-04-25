@@ -3,11 +3,16 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EditPage from './page';
 import { storage } from '../../../lib/storage';
+import { getInvestment } from '../../../lib/investments/storage';
 
 vi.mock('../../../lib/storage', () => ({
   storage: {
     readAll: vi.fn(),
   },
+}));
+
+vi.mock('../../../lib/investments/storage', () => ({
+  getInvestment: vi.fn(),
 }));
 
 const notFoundError = new Error('NEXT_NOT_FOUND');
@@ -40,6 +45,10 @@ describe('EditPage', () => {
     (storage.readAll as unknown as vi.Mock).mockResolvedValue({
       investments: [mockInvestment],
       labels: [mockLabel],
+    });
+    vi.mocked(getInvestment).mockImplementation(async (id: string) => {
+      const result = await vi.mocked(storage.readAll)();
+      return result.investments.find((inv) => inv.id === id) ?? null;
     });
   });
 
