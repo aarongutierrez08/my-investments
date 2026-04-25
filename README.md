@@ -28,6 +28,15 @@ Run `nw dev` locally to start the **Developer** agent. It watches for issues lab
 2. Wait for the Refiner to analyze it
 3. Run `nw dev` to start the Developer agent
 
+## Local database
+
+The local development database (Postgres + auth) is provided by the Supabase CLI.
+
+**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) running on your machine.
+
+- `npm run db:start` — boots the local Postgres + auth server. The first run pulls Docker images and may take a few minutes; subsequent runs are fast. The CLI prints the local API URL, the Studio URL (default `http://127.0.0.1:54323`), and the database connection string.
+- `npm run db:stop` — shuts the local stack down cleanly so it stops consuming resources.
+
 ---
 
 *Powered by [new-wai](https://github.com/aarongutierrez08/new-wai)*
