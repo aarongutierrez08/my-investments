@@ -1,16 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
-import { storage } from '../../../lib/storage';
+import { createInvestment } from '../../../lib/investments/storage';
 import type { Investment } from '../../../lib/types';
 
-vi.mock('../../../lib/storage', () => ({
-  storage: {
-    addInvestment: vi.fn(),
-  },
+vi.mock('../../../lib/investments/storage', () => ({
+  createInvestment: vi.fn(),
 }));
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const ASSIGNED_ID = '11111111-1111-4111-8111-111111111111';
+
+function stubCreate(): void {
+  (createInvestment as unknown as vi.Mock).mockImplementation(
+    async (input: {
+      instrument: string;
+      amount: number;
+      price: number;
+      purchaseDate: string;
+      category: Investment['category'];
+      labelIds: string[];
+      notes?: string;
+    }) => ({
+      id: ASSIGNED_ID,
+      instrument: input.instrument,
+      amount: input.amount,
+      price: input.price,
+      purchaseDate: input.purchaseDate,
+      category: input.category,
+      labelIds: input.labelIds,
+      labels: [],
+      ...(input.notes !== undefined && { notes: input.notes }),
+    }),
+  );
+}
 
 function makeRequest(body: unknown): Request {
   return new Request('http://localhost/api/investments', {
@@ -23,6 +47,7 @@ function makeRequest(body: unknown): Request {
 describe('POST /api/investments', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    stubCreate();
   });
 
   it('persists a valid investment and returns 201 with the created entity', async () => {
@@ -49,8 +74,16 @@ describe('POST /api/investments', () => {
     expect(body.notes).toBe('Initial position');
     expect(body.id).toMatch(UUID_REGEX);
 
-    expect(storage.addInvestment).toHaveBeenCalledTimes(1);
-    expect(storage.addInvestment).toHaveBeenCalledWith(body);
+    expect(createInvestment).toHaveBeenCalledTimes(1);
+    expect(createInvestment).toHaveBeenCalledWith({
+      instrument: 'AAPL',
+      amount: 10,
+      price: 150,
+      purchaseDate: '2026-01-15',
+      category: 'Stocks',
+      labelIds: ['lbl-longterm'],
+      notes: 'Initial position',
+    });
   });
 
   it('creates the investment without notes when notes is omitted', async () => {
@@ -68,7 +101,7 @@ describe('POST /api/investments', () => {
 
     expect(response.status).toBe(201);
     expect(body.notes).toBeUndefined();
-    expect(storage.addInvestment).toHaveBeenCalledWith(
+    expect(createInvestment).toHaveBeenCalledWith(
       expect.not.objectContaining({ notes: expect.anything() }),
     );
   });
@@ -89,7 +122,7 @@ describe('POST /api/investments', () => {
 
     expect(response.status).toBe(201);
     expect(body.notes).toBeUndefined();
-    expect(storage.addInvestment).toHaveBeenCalledWith(
+    expect(createInvestment).toHaveBeenCalledWith(
       expect.not.objectContaining({ notes: expect.anything() }),
     );
   });
@@ -161,7 +194,7 @@ describe('POST /api/investments', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when amount is not positive', async () => {
@@ -179,7 +212,7 @@ describe('POST /api/investments', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when price is not positive', async () => {
@@ -195,7 +228,7 @@ describe('POST /api/investments', () => {
     const response = await POST(makeRequest(payload));
 
     expect(response.status).toBe(400);
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when instrument is empty', async () => {
@@ -211,7 +244,7 @@ describe('POST /api/investments', () => {
     const response = await POST(makeRequest(payload));
 
     expect(response.status).toBe(400);
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when purchaseDate is missing', async () => {
@@ -229,7 +262,7 @@ describe('POST /api/investments', () => {
     const body = await response.json();
     expect(body).toHaveProperty('error');
     expect(body.error).toMatch(/purchaseDate/i);
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when purchaseDate is not a valid ISO date', async () => {
@@ -248,7 +281,7 @@ describe('POST /api/investments', () => {
     const body = await response.json();
     expect(body).toHaveProperty('error');
     expect(body.error).toMatch(/purchaseDate/i);
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when purchaseDate is not in YYYY-MM-DD format', async () => {
@@ -264,7 +297,7 @@ describe('POST /api/investments', () => {
     const response = await POST(makeRequest(payload));
 
     expect(response.status).toBe(400);
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when category is missing', async () => {
@@ -281,7 +314,7 @@ describe('POST /api/investments', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when category is not in CATEGORIES', async () => {
@@ -299,7 +332,7 @@ describe('POST /api/investments', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty('error');
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('returns 400 when the body is not valid JSON', async () => {
@@ -312,7 +345,7 @@ describe('POST /api/investments', () => {
     const response = await POST(request);
 
     expect(response.status).toBe(400);
-    expect(storage.addInvestment).not.toHaveBeenCalled();
+    expect(createInvestment).not.toHaveBeenCalled();
   });
 
   it('defaults labelIds to an empty array when omitted', async () => {
@@ -332,7 +365,7 @@ describe('POST /api/investments', () => {
   });
 
   describe('custom labels (free-text)', () => {
-    it('persists the provided labels on the created investment', async () => {
+    it('echoes the provided free-text labels on the response', async () => {
       const payload = {
         instrument: 'AAPL',
         amount: 10,
@@ -347,9 +380,6 @@ describe('POST /api/investments', () => {
 
       expect(response.status).toBe(201);
       expect(body.labels).toEqual(['long-term', 'tech']);
-      expect(storage.addInvestment).toHaveBeenCalledWith(
-        expect.objectContaining({ labels: ['long-term', 'tech'] }),
-      );
     });
 
     it('defaults labels to an empty array when omitted', async () => {
@@ -381,7 +411,7 @@ describe('POST /api/investments', () => {
       const response = await POST(makeRequest(payload));
 
       expect(response.status).toBe(400);
-      expect(storage.addInvestment).not.toHaveBeenCalled();
+      expect(createInvestment).not.toHaveBeenCalled();
     });
 
     it('returns 400 when labels is an array but contains non-strings', async () => {
@@ -397,7 +427,7 @@ describe('POST /api/investments', () => {
       const response = await POST(makeRequest(payload));
 
       expect(response.status).toBe(400);
-      expect(storage.addInvestment).not.toHaveBeenCalled();
+      expect(createInvestment).not.toHaveBeenCalled();
     });
 
     it('trims whitespace and drops case-insensitive duplicates', async () => {

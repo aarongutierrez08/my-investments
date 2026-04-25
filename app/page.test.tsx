@@ -3,11 +3,16 @@ import { render, screen, within, fireEvent, waitFor } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HomePage from './page';
 import { storage } from '../lib/storage';
+import { listInvestments } from '../lib/investments/storage';
 
 vi.mock('../lib/storage', () => ({
   storage: {
     readAll: vi.fn(),
   },
+}));
+
+vi.mock('../lib/investments/storage', () => ({
+  listInvestments: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -16,6 +21,15 @@ vi.mock('next/navigation', () => ({
     refresh: vi.fn(),
   }),
 }));
+
+beforeEach(() => {
+  (listInvestments as unknown as vi.Mock).mockImplementation(async () => {
+    const data = await (
+      storage.readAll as unknown as () => Promise<{ investments?: unknown[] }>
+    )();
+    return data?.investments ?? [];
+  });
+});
 
 describe('HomePage', () => {
   it('AC-001: displays a message when there are no investments', async () => {

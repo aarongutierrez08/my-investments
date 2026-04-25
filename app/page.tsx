@@ -1,9 +1,13 @@
 import Link from 'next/link';
 import { storage } from '../lib/storage';
+import { listInvestments } from '../lib/investments/storage';
 import { InvestmentsTable } from './InvestmentsTable';
 
 export default async function HomePage() {
-  const { investments, labels } = await storage.readAll();
+  const [investments, { labels }] = await Promise.all([
+    listInvestments(),
+    storage.readAll(),
+  ]);
 
   return (
     <main className="container mx-auto p-4">

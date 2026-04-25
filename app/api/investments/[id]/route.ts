@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
-import { storage } from '../../../../lib/storage';
+import {
+  deleteInvestment,
+  updateInvestment,
+  type UpdateInvestmentInput,
+} from '../../../../lib/investments/storage';
 import { investmentSchema } from '../schema';
-import type { Investment } from '../../../../lib/types';
 
 export async function DELETE(
   _request: Request,
@@ -10,7 +13,7 @@ export async function DELETE(
   const { id } = await context.params;
 
   try {
-    await storage.deleteInvestment(id);
+    await deleteInvestment(id);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json({ error: error.message }, { status: 404 });
@@ -45,18 +48,17 @@ export async function PUT(
   const notesWasSent =
     typeof payload === 'object' && payload !== null && 'notes' in payload;
 
-  const patch: Partial<Investment> = {
+  const patch: UpdateInvestmentInput = {
     instrument: parsed.data.instrument,
     amount: parsed.data.amount,
     price: parsed.data.price,
     purchaseDate: parsed.data.purchaseDate,
     category: parsed.data.category,
     labelIds: parsed.data.labelIds,
-    ...(parsed.data.labels !== undefined && { labels: parsed.data.labels }),
     ...(notesWasSent && { notes: parsed.data.notes }),
   };
 
-  const updated = await storage.updateInvestment(id, patch);
+  const updated = await updateInvestment(id, patch);
   if (updated === null) {
     return NextResponse.json(
       { error: `Investment with id "${id}" not found.` },
@@ -64,5 +66,10 @@ export async function PUT(
     );
   }
 
-  return NextResponse.json(updated, { status: 200 });
+  const response = {
+    ...updated,
+    ...(parsed.data.labels !== undefined && { labels: parsed.data.labels }),
+  };
+
+  return NextResponse.json(response, { status: 200 });
 }

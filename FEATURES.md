@@ -8,6 +8,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 
 - Investment entity with instrument, amount, price, purchase date, category, labels and notes — `lib/types.ts`
 - JSON-file storage for investments and labels — `lib/storage.ts`
+- Supabase storage for investments — `lib/investments/storage.ts`
 
 ## Create
 

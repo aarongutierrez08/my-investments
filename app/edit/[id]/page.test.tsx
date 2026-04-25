@@ -3,11 +3,16 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EditPage from './page';
 import { storage } from '../../../lib/storage';
+import { getInvestment } from '../../../lib/investments/storage';
 
 vi.mock('../../../lib/storage', () => ({
   storage: {
     readAll: vi.fn(),
   },
+}));
+
+vi.mock('../../../lib/investments/storage', () => ({
+  getInvestment: vi.fn(),
 }));
 
 const notFoundError = new Error('NEXT_NOT_FOUND');
@@ -31,6 +36,7 @@ const mockInvestment = {
   purchaseDate: '2026-01-15',
   category: 'Stocks',
   labelIds: [mockLabel.id],
+  labels: [],
   notes: 'Initial position',
 };
 
@@ -38,9 +44,12 @@ describe('EditPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-      investments: [mockInvestment],
+      investments: [],
       labels: [mockLabel],
     });
+    (getInvestment as unknown as vi.Mock).mockImplementation(async (id: string) =>
+      id === mockInvestment.id ? mockInvestment : null,
+    );
   });
 
   it('renders the form pre-filled with the investment values when the id exists', async () => {
