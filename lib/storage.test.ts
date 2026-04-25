@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { storage, _setTestDataFilePath } from './storage';
+import { storage } from './storage';
 import { Investment, Label } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,7 +11,6 @@ const TEST_DATA_FILE = path.join(TEST_DATA_DIR, 'portfolio.json');
 
 describe('Storage Module (labels-only)', () => {
   beforeEach(async () => {
-    _setTestDataFilePath(TEST_DATA_FILE);
     await fs.mkdir(TEST_DATA_DIR, { recursive: true });
     await fs.writeFile(
       TEST_DATA_FILE,
@@ -26,7 +25,7 @@ describe('Storage Module (labels-only)', () => {
 
   it('should return an empty portfolio if the data file does not exist', async () => {
     await fs.unlink(TEST_DATA_FILE);
-    const portfolio = await storage.readAll();
+    const portfolio = await storage.readAll(TEST_DATA_FILE);
     expect(portfolio).toEqual({ investments: [], labels: [] });
   });
 
@@ -37,9 +36,9 @@ describe('Storage Module (labels-only)', () => {
       color: '#FF0000',
     };
 
-    await storage.addLabel(newLabel);
+    await storage.addLabel(newLabel, TEST_DATA_FILE);
 
-    const portfolio = await storage.readAll();
+    const portfolio = await storage.readAll(TEST_DATA_FILE);
     expect(portfolio.labels).toHaveLength(1);
     expect(portfolio.labels[0]).toEqual(newLabel);
   });
@@ -63,7 +62,6 @@ describe('Storage Module (labels-only)', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Crypto',
       labelIds: [labelToRemove.id, labelToKeep.id],
-      labels: [],
     };
     await fs.writeFile(
       TEST_DATA_FILE,
@@ -78,9 +76,9 @@ describe('Storage Module (labels-only)', () => {
       'utf-8',
     );
 
-    await storage.removeLabel(labelToRemove.id);
+    await storage.removeLabel(labelToRemove.id, TEST_DATA_FILE);
 
-    const portfolio = await storage.readAll();
+    const portfolio = await storage.readAll(TEST_DATA_FILE);
     expect(portfolio.labels).toHaveLength(1);
     expect(portfolio.labels[0]).toEqual(labelToKeep);
     const updated = portfolio.investments.find((inv) => inv.id === investmentWithBoth.id);
@@ -103,13 +101,12 @@ describe('Storage Module (labels-only)', () => {
       };
       await fs.writeFile(TEST_DATA_FILE, JSON.stringify(fileContents, null, 2), 'utf-8');
 
-      const portfolio = await storage.readAll();
+      const portfolio = await storage.readAll(TEST_DATA_FILE);
 
       expect(portfolio.investments).toHaveLength(1);
       expect(portfolio.investments[0]).toEqual({
         ...legacyRecord,
         category: 'Other',
-        labels: [],
       });
     });
 
@@ -129,7 +126,7 @@ describe('Storage Module (labels-only)', () => {
       );
       await fs.writeFile(TEST_DATA_FILE, serialized, 'utf-8');
 
-      await storage.readAll();
+      await storage.readAll(TEST_DATA_FILE);
 
       const onDisk = await fs.readFile(TEST_DATA_FILE, 'utf-8');
       expect(onDisk).toBe(serialized);

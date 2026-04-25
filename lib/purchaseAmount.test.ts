@@ -15,7 +15,6 @@ function makeInvestment(amount: number, price: number): Investment {
     purchaseDate: '2023-01-01',
     category: 'Stocks',
     labelIds: [],
-    labels: [],
   };
 }
 

@@ -1,6 +1,6 @@
 import type { Investment } from './types';
 
-const HEADER = 'name,category,amount,price,purchaseDate,labels,notes';
+const HEADER = 'name,category,amount,price,purchaseDate,notes';
 
 function escapeField(value: string): string {
   if (value === '') return '';
@@ -19,7 +19,6 @@ export function buildInvestmentsCsv(rows: Investment[]): string {
       escapeField(String(row.amount)),
       escapeField(String(row.price)),
       escapeField(row.purchaseDate ?? ''),
-      escapeField((row.labels ?? []).join('|')),
       escapeField(row.notes ?? ''),
     ];
     lines.push(fields.join(','));

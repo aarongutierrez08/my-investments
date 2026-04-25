@@ -221,7 +221,7 @@ describe('HomePage', () => {
       const select = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(select, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'no-such-instrument' } });
 
       expect(screen.getByText(/no investments in this category/i)).toBeInTheDocument();
@@ -315,64 +315,6 @@ describe('HomePage', () => {
 
       expect(within(rowWithHighRisk).getByText(labelHighRisk.name)).toBeInTheDocument();
       expect(within(rowWithHighRisk).queryByText(labelGrowth.name)).not.toBeInTheDocument();
-    });
-  });
-
-  describe('custom free-text labels on investment rows', () => {
-    function findRowByInstrument(instrument: string) {
-      const rows = screen.getAllByRole('row');
-      return rows.find((row) =>
-        within(row).queryByRole('cell', { name: new RegExp(instrument, 'i') }),
-      )!;
-    }
-
-    it('renders each free-text label as a badge next to the instrument name', async () => {
-      const investment = {
-        id: 'inv-with-labels',
-        instrument: 'AAPL',
-        amount: 1,
-        price: 100,
-        purchaseDate: '2026-01-15',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['crypto', 'long-term'],
-      };
-
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [investment],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const row = findRowByInstrument('AAPL');
-      expect(within(row).getByText('crypto')).toBeInTheDocument();
-      expect(within(row).getByText('long-term')).toBeInTheDocument();
-    });
-
-    it('renders nothing extra when the investment has no free-text labels', async () => {
-      const investment = {
-        id: 'inv-no-labels',
-        instrument: 'AAPL',
-        amount: 1,
-        price: 100,
-        purchaseDate: '2026-01-15',
-        category: 'Stocks',
-        labelIds: [],
-        labels: [],
-      };
-
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [investment],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const row = findRowByInstrument('AAPL');
-      expect(within(row).queryByText(/no labels/i)).not.toBeInTheDocument();
     });
   });
 
@@ -674,25 +616,6 @@ describe('HomePage', () => {
       expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
     });
 
-    it('AC-002: updates the count when a label filter narrows the list', async () => {
-      const withLabel = {
-        ...stockInv,
-        labels: ['long-term'],
-      };
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [withLabel, cryptoInv, bondInv],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const select = screen.getByRole('combobox', { name: /filter by label/i });
-      fireEvent.change(select, { target: { value: 'long-term' } });
-
-      expect(screen.getByText('Showing 1 investment')).toBeInTheDocument();
-    });
-
     it('AC-003: shows "Showing 0 investments" when the active filters match nothing', async () => {
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({
         investments: [stockInv, cryptoInv],
@@ -718,113 +641,6 @@ describe('HomePage', () => {
       render(Resolved);
 
       expect(screen.getByText('Showing 0 investments')).toBeInTheDocument();
-    });
-  });
-
-  describe('filter by custom label', () => {
-    const invCryptoLong = {
-      id: 'inv1',
-      instrument: 'BTC',
-      amount: 1,
-      price: 30000,
-      purchaseDate: '2023-01-15',
-      category: 'Crypto',
-      labelIds: [],
-      labels: ['long-term', 'crypto'],
-    };
-    const invStockLong = {
-      id: 'inv2',
-      instrument: 'AAPL',
-      amount: 10,
-      price: 150,
-      purchaseDate: '2023-02-20',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['long-term', 'dividends'],
-    };
-    const invStockShort = {
-      id: 'inv3',
-      instrument: 'TSLA',
-      amount: 2,
-      price: 200,
-      purchaseDate: '2023-03-10',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['short-term'],
-    };
-
-    beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invCryptoLong, invStockLong, invStockShort],
-        labels: [],
-      });
-    });
-
-    it('AC-001: renders a "Filter by label" dropdown with all labels in use (deduplicated, sorted) plus "All labels"', async () => {
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const select = screen.getByRole('combobox', { name: /filter by label/i }) as HTMLSelectElement;
-      const optionTexts = Array.from(select.options).map((o) => o.textContent);
-
-      expect(optionTexts).toEqual(['All labels', 'crypto', 'dividends', 'long-term', 'short-term']);
-    });
-
-    function visibleInstruments() {
-      const table = screen.queryByRole('table');
-      if (!table) {
-        return [] as string[];
-      }
-      const bodyRows = within(table).getAllByRole('row').slice(1);
-      return bodyRows.map(
-        (row) => within(row).getAllByRole('cell')[0].textContent?.match(/^[A-Z]+/)?.[0] ?? '',
-      );
-    }
-
-    it('AC-002: shows only investments that include the selected label', async () => {
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const select = screen.getByRole('combobox', { name: /filter by label/i });
-      fireEvent.change(select, { target: { value: 'long-term' } });
-
-      const instruments = visibleInstruments();
-      expect(instruments).toContain('BTC');
-      expect(instruments).toContain('AAPL');
-      expect(instruments).not.toContain('TSLA');
-    });
-
-    it('AC-003: combines with the category filter (AND)', async () => {
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
-      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
-
-      const labelSelect = screen.getByRole('combobox', { name: /filter by label/i });
-      fireEvent.change(labelSelect, { target: { value: 'long-term' } });
-
-      const instruments = visibleInstruments();
-      expect(instruments).toEqual(['AAPL']);
-    });
-
-    it('selecting "All labels" restores the list to what the category filter alone would show', async () => {
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
-      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
-
-      const labelSelect = screen.getByRole('combobox', { name: /filter by label/i });
-      fireEvent.change(labelSelect, { target: { value: 'long-term' } });
-      expect(visibleInstruments()).not.toContain('TSLA');
-
-      fireEvent.change(labelSelect, { target: { value: '' } });
-
-      const instruments = visibleInstruments();
-      expect(instruments).toContain('AAPL');
-      expect(instruments).toContain('TSLA');
-      expect(instruments).not.toContain('BTC');
     });
   });
 
@@ -882,7 +698,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       expect(search).toBeInTheDocument();
     });
 
@@ -890,7 +706,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'Apple' } });
 
       const instruments = visibleInstruments();
@@ -903,7 +719,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'apple' } });
 
       const instruments = visibleInstruments();
@@ -914,7 +730,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: '  apple  ' } });
 
       const instruments = visibleInstruments();
@@ -928,7 +744,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'apple' } });
 
       const instruments = visibleInstruments();
@@ -942,7 +758,7 @@ describe('HomePage', () => {
       const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'apple' } });
       expect(visibleInstruments()).toEqual(['Apple Inc']);
 
@@ -955,126 +771,6 @@ describe('HomePage', () => {
     });
   });
 
-  describe('search by name or label', () => {
-    const invApple = {
-      id: 'inv1',
-      instrument: 'Apple',
-      amount: 10,
-      price: 150,
-      purchaseDate: '2023-01-15',
-      category: 'Stocks',
-      labelIds: [],
-      labels: [],
-    };
-    const invTesla = {
-      id: 'inv2',
-      instrument: 'Tesla',
-      amount: 2,
-      price: 200,
-      purchaseDate: '2023-02-20',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['tech'],
-    };
-    const invMeta = {
-      id: 'inv3',
-      instrument: 'Meta',
-      amount: 3,
-      price: 250,
-      purchaseDate: '2023-03-10',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['growth', 'US'],
-    };
-    const invBtc = {
-      id: 'inv4',
-      instrument: 'BTC',
-      amount: 1,
-      price: 30000,
-      purchaseDate: '2023-04-05',
-      category: 'Crypto',
-      labelIds: [],
-      labels: ['growth'],
-    };
-
-    function visibleInstruments() {
-      const table = screen.queryByRole('table');
-      if (!table) {
-        return [] as string[];
-      }
-      const bodyRows = within(table).getAllByRole('row').slice(1);
-      return bodyRows.map((row) => {
-        const firstCell = within(row).getAllByRole('cell')[0];
-        const nameSpan = firstCell.querySelector('span');
-        return nameSpan?.textContent?.trim() ?? '';
-      });
-    }
-
-    it('uses "Search by name, label or notes" as the placeholder', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invApple],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      expect(screen.getByPlaceholderText('Search by name, label or notes')).toBeInTheDocument();
-    });
-
-    it('AC-001: typing a label text shows only rows whose labels match', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invApple, invTesla],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
-      fireEvent.change(search, { target: { value: 'tech' } });
-
-      const instruments = visibleInstruments();
-      expect(instruments).toContain('Tesla');
-      expect(instruments).not.toContain('Apple');
-    });
-
-    it('AC-002: matches label text case-insensitively', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invApple, invMeta],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
-      fireEvent.change(search, { target: { value: 'GROWTH' } });
-
-      const instruments = visibleInstruments();
-      expect(instruments).toContain('Meta');
-      expect(instruments).not.toContain('Apple');
-    });
-
-    it('AC-003: combines with an active category filter using AND (name OR label within category)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invApple, invMeta, invBtc],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
-      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
-
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
-      fireEvent.change(search, { target: { value: 'growth' } });
-
-      const instruments = visibleInstruments();
-      expect(instruments).toEqual(['Meta']);
-    });
-  });
 
   describe('total by category breakdown', () => {
     it('AC-001: shows a row per category with the sum of investment amounts', async () => {
@@ -1306,7 +1002,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'no-match-xyz' } });
 
       expect(
@@ -1427,7 +1123,6 @@ describe('HomePage', () => {
             purchaseDate: '2023-01-01',
             category: 'Stocks',
             labelIds: [],
-            labels: ['long-term'],
           },
           {
             id: 's2',
@@ -1437,7 +1132,6 @@ describe('HomePage', () => {
             purchaseDate: '2023-01-02',
             category: 'Stocks',
             labelIds: [],
-            labels: ['long-term'],
           },
           {
             id: 's3',
@@ -1447,7 +1141,6 @@ describe('HomePage', () => {
             purchaseDate: '2023-01-03',
             category: 'Stocks',
             labelIds: [],
-            labels: ['short-term'],
           },
           {
             id: 'c1',
@@ -1457,7 +1150,6 @@ describe('HomePage', () => {
             purchaseDate: '2023-01-04',
             category: 'Crypto',
             labelIds: [],
-            labels: ['long-term'],
           },
         ],
         labels: [],
@@ -1469,12 +1161,12 @@ describe('HomePage', () => {
       expect(screen.getByText(/^Stocks: .*· 3 investments$/)).toBeInTheDocument();
       expect(screen.getByText(/^Crypto: .*· 1 investment$/)).toBeInTheDocument();
 
-      const labelSelect = screen.getByRole('combobox', { name: /filter by label/i });
-      fireEvent.change(labelSelect, { target: { value: 'long-term' } });
+      const search = screen.getByPlaceholderText('Search by name or notes');
+      fireEvent.change(search, { target: { value: 'AAPL' } });
 
-      expect(screen.getByText(/^Stocks: .*· 2 investments$/)).toBeInTheDocument();
-      expect(screen.getByText(/^Crypto: .*· 1 investment$/)).toBeInTheDocument();
+      expect(screen.getByText(/^Stocks: .*· 1 investment$/)).toBeInTheDocument();
       expect(screen.queryByText(/^Stocks: .*· 3 investments$/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Crypto: /)).not.toBeInTheDocument();
     });
   });
 
@@ -2355,235 +2047,6 @@ describe('HomePage', () => {
     });
   });
 
-  describe('sort by label', () => {
-    const invZeta = {
-      id: 'inv-zeta',
-      instrument: 'ZET',
-      amount: 10,
-      price: 1,
-      purchaseDate: '2023-01-01',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['zeta'],
-    };
-    const invAlpha = {
-      id: 'inv-alpha',
-      instrument: 'ALP',
-      amount: 20,
-      price: 1,
-      purchaseDate: '2023-02-01',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['alpha'],
-    };
-    const invMango = {
-      id: 'inv-mango',
-      instrument: 'MAN',
-      amount: 30,
-      price: 1,
-      purchaseDate: '2023-03-01',
-      category: 'Stocks',
-      labelIds: [],
-      labels: ['mango'],
-    };
-    const invNoLabels = {
-      id: 'inv-nolabels',
-      instrument: 'NIL',
-      amount: 40,
-      price: 1,
-      purchaseDate: '2023-04-01',
-      category: 'Stocks',
-      labelIds: [],
-      labels: [],
-    };
-
-    function visibleInstruments() {
-      const table = screen.queryByRole('table');
-      if (!table) {
-        return [] as string[];
-      }
-      const bodyRows = within(table).getAllByRole('row').slice(1);
-      return bodyRows.map((row) => {
-        const cell = within(row).getAllByRole('cell')[0];
-        return cell.querySelector('span')?.textContent?.trim() ?? '';
-      });
-    }
-
-    it('AC-001: first click on the Labels header sorts rows A→Z by each investment\'s first label', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invZeta, invAlpha, invMango],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['ALP', 'MAN', 'ZET']);
-
-      const labelHeader = sortLabelButton.closest('th');
-      expect(labelHeader?.getAttribute('aria-sort')).toBe('ascending');
-    });
-
-    it('AC-002: second click on the Labels header sorts rows Z→A', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invZeta, invAlpha, invMango],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['ZET', 'MAN', 'ALP']);
-
-      const labelHeader = sortLabelButton.closest('th');
-      expect(labelHeader?.getAttribute('aria-sort')).toBe('descending');
-    });
-
-    it('AC-003: unlabeled investments appear after every labeled one in both directions', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invZeta, invNoLabels, invAlpha, invMango],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['ALP', 'MAN', 'ZET', 'NIL']);
-
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['ZET', 'MAN', 'ALP', 'NIL']);
-    });
-
-    it('compares by the alphabetically-first label when an investment has multiple labels', async () => {
-      const invDeltaBeta = {
-        id: 'inv-delta-beta',
-        instrument: 'DBC',
-        amount: 1,
-        price: 1,
-        purchaseDate: '2023-01-01',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['delta', 'beta', 'charlie'],
-      };
-      const invAardvark = {
-        id: 'inv-aardvark',
-        instrument: 'AAR',
-        amount: 1,
-        price: 1,
-        purchaseDate: '2023-01-02',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['aardvark'],
-      };
-      const invZ = {
-        id: 'inv-z',
-        instrument: 'ZZZ',
-        amount: 1,
-        price: 1,
-        purchaseDate: '2023-01-03',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['z'],
-      };
-
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invZ, invDeltaBeta, invAardvark],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['AAR', 'DBC', 'ZZZ']);
-    });
-
-    it('label comparison is case-insensitive', async () => {
-      const invUppercase = {
-        id: 'inv-upper',
-        instrument: 'UPP',
-        amount: 1,
-        price: 1,
-        purchaseDate: '2023-01-01',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['Apple'],
-      };
-      const invLowercase = {
-        id: 'inv-lower',
-        instrument: 'LOW',
-        amount: 1,
-        price: 1,
-        purchaseDate: '2023-01-02',
-        category: 'Stocks',
-        labelIds: [],
-        labels: ['banana'],
-      };
-
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invLowercase, invUppercase],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['UPP', 'LOW']);
-    });
-
-    it('third click clears the label sort, matching other sortable columns', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invZeta, invAlpha, invMango],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-      fireEvent.click(sortLabelButton);
-      fireEvent.click(sortLabelButton);
-
-      const labelHeader = sortLabelButton.closest('th');
-      expect(labelHeader?.getAttribute('aria-sort')).toBe('none');
-      expect(visibleInstruments()).toEqual(['ZET', 'ALP', 'MAN']);
-    });
-
-    it('label sort replaces an active amount sort (mutually exclusive)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invZeta, invAlpha, invMango],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      expect(visibleInstruments()).toEqual(['MAN', 'ALP', 'ZET']);
-
-      const sortLabelButton = screen.getByRole('button', { name: /sort by label/i });
-      fireEvent.click(sortLabelButton);
-
-      expect(visibleInstruments()).toEqual(['ALP', 'MAN', 'ZET']);
-    });
-  });
-
   describe('default sort by amount descending', () => {
     function visibleInstruments() {
       const table = screen.queryByRole('table');
@@ -3190,7 +2653,7 @@ describe('HomePage', () => {
       const select = screen.getByRole('combobox', { name: /filter by category/i });
       fireEvent.change(select, { target: { value: 'Stocks' } });
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'AAPL' } });
 
       expect(visibleInstruments()).toEqual(['AAPL']);
@@ -3360,257 +2823,6 @@ describe('HomePage', () => {
     });
   });
 
-  describe('issue #72: total invested per custom label', () => {
-    it('AC-001: shows a row per label with the sum of amounts of every investment that carries that label', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [
-          {
-            id: 'i1',
-            instrument: 'AAPL',
-            amount: 1000,
-            price: 1,
-            purchaseDate: '2023-01-01',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['Retirement', 'LongTerm'],
-          },
-          {
-            id: 'i2',
-            instrument: 'GOOG',
-            amount: 500,
-            price: 1,
-            purchaseDate: '2023-01-02',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['LongTerm'],
-          },
-        ],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      expect(
-        screen.getByRole('heading', { name: /totals by label/i }),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/^LongTerm: \$1500\b/)).toBeInTheDocument();
-      expect(screen.getByText(/^Retirement: \$1000\b/)).toBeInTheDocument();
-    });
-
-    it('AC-002: excludes untagged investments from the per-label totals but keeps them in the overall total', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [
-          {
-            id: 'tagged',
-            instrument: 'AAPL',
-            amount: 100,
-            price: 1,
-            purchaseDate: '2023-01-01',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['Growth'],
-          },
-          {
-            id: 'untagged',
-            instrument: 'GOOG',
-            amount: 50,
-            price: 1,
-            purchaseDate: '2023-01-02',
-            category: 'Stocks',
-            labelIds: [],
-            labels: [],
-          },
-        ],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      expect(
-        screen.getByRole('heading', { name: /totals by label/i }),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/^Growth: \$100\b/)).toBeInTheDocument();
-      expect(screen.queryByText(/^GOOG:/)).not.toBeInTheDocument();
-      expect(screen.getByText('Total invested: $150')).toBeInTheDocument();
-    });
-
-    it('AC-003: does not render the per-label totals block when no investment carries any label', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [
-          {
-            id: 'i1',
-            instrument: 'AAPL',
-            amount: 100,
-            price: 1,
-            purchaseDate: '2023-01-01',
-            category: 'Stocks',
-            labelIds: [],
-            labels: [],
-          },
-        ],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      expect(
-        screen.queryByRole('heading', { name: /totals by label/i }),
-      ).not.toBeInTheDocument();
-    });
-  });
-
-  describe('issue #106: investment count per custom label', () => {
-    function labelSection() {
-      const heading = screen.getByRole('heading', { name: /totals by label/i });
-      const section = heading.closest('section');
-      if (!section) throw new Error('Totals by label section not found');
-      return section as HTMLElement;
-    }
-
-    it('AC-001: each label row shows the count of investments carrying that label with singular/plural wording', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [
-          {
-            id: 'i1',
-            instrument: 'BTC',
-            amount: 100,
-            price: 1,
-            purchaseDate: '2023-01-01',
-            category: 'Crypto',
-            labelIds: [],
-            labels: ['Crypto'],
-          },
-          {
-            id: 'i2',
-            instrument: 'ETH',
-            amount: 200,
-            price: 1,
-            purchaseDate: '2023-01-02',
-            category: 'Crypto',
-            labelIds: [],
-            labels: ['Crypto'],
-          },
-          {
-            id: 'i3',
-            instrument: 'SOL',
-            amount: 300,
-            price: 1,
-            purchaseDate: '2023-01-03',
-            category: 'Crypto',
-            labelIds: [],
-            labels: ['Crypto'],
-          },
-          {
-            id: 'i4',
-            instrument: 'BOND',
-            amount: 400,
-            price: 1,
-            purchaseDate: '2023-01-04',
-            category: 'Bonds',
-            labelIds: [],
-            labels: ['Bonds'],
-          },
-        ],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const section = labelSection();
-      expect(within(section).getByText(/^Crypto: .*· 3 investments$/)).toBeInTheDocument();
-      expect(within(section).getByText(/^Bonds: .*· 1 investment$/)).toBeInTheDocument();
-      expect(within(section).queryByText(/^Bonds: .*· 1 investments$/)).not.toBeInTheDocument();
-    });
-
-    it('AC-002: per-label counts reflect the currently active category filter', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [
-          {
-            id: 'i1',
-            instrument: 'AAPL',
-            amount: 100,
-            price: 1,
-            purchaseDate: '2023-01-01',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['LongTerm'],
-          },
-          {
-            id: 'i2',
-            instrument: 'GOOG',
-            amount: 200,
-            price: 1,
-            purchaseDate: '2023-01-02',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['LongTerm'],
-          },
-          {
-            id: 'i3',
-            instrument: 'BTC',
-            amount: 300,
-            price: 1,
-            purchaseDate: '2023-01-03',
-            category: 'Crypto',
-            labelIds: [],
-            labels: ['LongTerm'],
-          },
-        ],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      expect(within(labelSection()).getByText(/^LongTerm: .*· 3 investments$/)).toBeInTheDocument();
-
-      const categorySelect = screen.getByRole('combobox', { name: /filter by category/i });
-      fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
-
-      expect(within(labelSection()).getByText(/^LongTerm: .*· 2 investments$/)).toBeInTheDocument();
-      expect(within(labelSection()).queryByText(/^LongTerm: .*· 3 investments$/)).not.toBeInTheDocument();
-    });
-
-    it('AC-003: an investment carrying multiple labels contributes one to each label count', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [
-          {
-            id: 'i1',
-            instrument: 'AAPL',
-            amount: 100,
-            price: 1,
-            purchaseDate: '2023-01-01',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['Crypto', 'LongTerm'],
-          },
-          {
-            id: 'i2',
-            instrument: 'GOOG',
-            amount: 200,
-            price: 1,
-            purchaseDate: '2023-01-02',
-            category: 'Stocks',
-            labelIds: [],
-            labels: ['LongTerm'],
-          },
-        ],
-        labels: [],
-      });
-
-      const Resolved = await HomePage();
-      render(Resolved);
-
-      const section = labelSection();
-      expect(within(section).getByText(/^Crypto: .*· 1 investment$/)).toBeInTheDocument();
-      expect(within(section).getByText(/^LongTerm: .*· 2 investments$/)).toBeInTheDocument();
-    });
-  });
-
   describe('issue #68: search investments by notes content', () => {
     const invWithBonus = {
       id: 'inv-bonus',
@@ -3658,7 +2870,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'bonus' } });
 
       const instruments = visibleInstruments();
@@ -3676,7 +2888,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'BONUS' } });
 
       const instruments = visibleInstruments();
@@ -3703,7 +2915,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes');
+      const search = screen.getByPlaceholderText('Search by name or notes');
       fireEvent.change(search, { target: { value: 'bonus' } });
 
       const instruments = visibleInstruments();
@@ -3719,7 +2931,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      expect(screen.getByPlaceholderText('Search by name, label or notes')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Search by name or notes')).toBeInTheDocument();
     });
   });
 
@@ -3970,7 +3182,7 @@ describe('HomePage', () => {
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes') as HTMLInputElement;
+      const search = screen.getByPlaceholderText('Search by name or notes') as HTMLInputElement;
       fireEvent.change(search, { target: { value: 'AAPL' } });
       expect(visibleInstruments()).toEqual(['AAPL']);
 
@@ -4009,28 +3221,24 @@ describe('HomePage', () => {
       expect(instruments).toContain('US10Y');
     });
 
-    it('AC-001: clicking "Clear filters" resets every active filter (search, category, label, dates, amounts) in one go', async () => {
-      const invWithLabel = {
+    it('AC-001: clicking "Clear filters" resets every active filter (search, category, dates, amounts) in one go', async () => {
+      const invGoog = {
         ...invStocks,
-        id: 'inv-labelled',
+        id: 'inv-goog',
         instrument: 'GOOG',
-        labels: ['growth'],
       };
 
       (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-        investments: [invWithLabel, invCrypto, invBonds],
+        investments: [invGoog, invCrypto, invBonds],
         labels: [],
       });
 
       const Resolved = await HomePage();
       render(Resolved);
 
-      const search = screen.getByPlaceholderText('Search by name, label or notes') as HTMLInputElement;
+      const search = screen.getByPlaceholderText('Search by name or notes') as HTMLInputElement;
       const categorySelect = screen.getByRole('combobox', {
         name: /filter by category/i,
-      }) as HTMLSelectElement;
-      const labelSelect = screen.getByRole('combobox', {
-        name: /filter by label/i,
       }) as HTMLSelectElement;
       const fromInput = screen.getByLabelText('From') as HTMLInputElement;
       const toInput = screen.getByLabelText('To') as HTMLInputElement;
@@ -4039,7 +3247,6 @@ describe('HomePage', () => {
 
       fireEvent.change(search, { target: { value: 'GOOG' } });
       fireEvent.change(categorySelect, { target: { value: 'Stocks' } });
-      fireEvent.change(labelSelect, { target: { value: 'growth' } });
       fireEvent.change(fromInput, { target: { value: '2023-01-01' } });
       fireEvent.change(toInput, { target: { value: '2023-01-31' } });
       fireEvent.change(minInput, { target: { value: '50' } });
@@ -4050,7 +3257,6 @@ describe('HomePage', () => {
 
       expect(search.value).toBe('');
       expect(categorySelect.value).toBe('');
-      expect(labelSelect.value).toBe('');
       expect(fromInput.value).toBe('');
       expect(toInput.value).toBe('');
       expect(minInput.value).toBe('');
@@ -4335,7 +3541,7 @@ describe('HomePage', () => {
 
       const csvText = await captured.blob!.text();
       const lines = csvText.split('\n');
-      expect(lines[0]).toBe('name,category,amount,price,purchaseDate,labels,notes');
+      expect(lines[0]).toBe('name,category,amount,price,purchaseDate,notes');
       expect(lines).toHaveLength(3);
       expect(lines[1].startsWith('AAPL,')).toBe(true);
       expect(lines[2].startsWith('MSFT,')).toBe(true);
@@ -4366,7 +3572,7 @@ describe('HomePage', () => {
       render(Resolved);
 
       const search = screen.getByPlaceholderText(
-        'Search by name, label or notes',
+        'Search by name or notes',
       ) as HTMLInputElement;
       fireEvent.change(search, { target: { value: 'no-such-instrument-zzz' } });
 
@@ -4375,7 +3581,7 @@ describe('HomePage', () => {
       fireEvent.click(exportButton);
 
       const csvText = await captured.blob!.text();
-      expect(csvText).toBe('name,category,amount,price,purchaseDate,labels,notes');
+      expect(csvText).toBe('name,category,amount,price,purchaseDate,notes');
 
       createElementSpy.mockRestore();
     });

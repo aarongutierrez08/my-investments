@@ -55,7 +55,6 @@ export async function PUT(
     purchaseDate: parsed.data.purchaseDate,
     category: parsed.data.category,
     labelIds: parsed.data.labelIds,
-    ...(parsed.data.labels !== undefined && { labels: parsed.data.labels }),
     ...(notesWasSent && { notes: parsed.data.notes }),
   };
 

@@ -82,7 +82,7 @@ describe('PUT /api/investments/[id]', () => {
   };
 
   it('returns 200 and the updated investment on success', async () => {
-    const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
+    const updated: Investment = { id: 'inv-001', ...validPayload };
     (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     const response = await PUT(
@@ -165,7 +165,6 @@ describe('PUT /api/investments/[id]', () => {
   it('updates the category when a valid one is provided', async () => {
     const updated: Investment = {
       id: 'inv-001',
-      labels: [],
       ...validPayload,
       category: 'Crypto',
     };
@@ -196,54 +195,9 @@ describe('PUT /api/investments/[id]', () => {
     expect(updateInvestment).not.toHaveBeenCalled();
   });
 
-  it('persists a new labels array on update', async () => {
-    const updated: Investment = {
-      id: 'inv-001',
-      ...validPayload,
-      labels: ['crypto', 'long-term'],
-    };
-    (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
-
-    const response = await PUT(
-      makePutRequest('inv-001', { ...validPayload, labels: ['crypto', 'long-term'] }),
-      makeContext('inv-001'),
-    );
-
-    expect(response.status).toBe(200);
-    expect(updateInvestment).toHaveBeenCalledWith(
-      'inv-001',
-      expect.objectContaining({ labels: ['crypto', 'long-term'] }),
-    );
-
-    const body = (await response.json()) as Investment;
-    expect(body.labels).toEqual(['crypto', 'long-term']);
-  });
-
-  it('trims whitespace and dedupes labels on update', async () => {
-    (updateInvestment as unknown as vi.Mock).mockResolvedValue({
-      id: 'inv-001',
-      ...validPayload,
-      labels: ['crypto', 'long-term'],
-    });
-
-    await PUT(
-      makePutRequest('inv-001', {
-        ...validPayload,
-        labels: ['crypto', 'CRYPTO', '  long-term  '],
-      }),
-      makeContext('inv-001'),
-    );
-
-    expect(updateInvestment).toHaveBeenCalledWith(
-      'inv-001',
-      expect.objectContaining({ labels: ['crypto', 'long-term'] }),
-    );
-  });
-
   it('updates the stored purchaseDate when a valid new date is provided', async () => {
     const updated: Investment = {
       id: 'inv-001',
-      labels: [],
       ...validPayload,
       purchaseDate: '2024-06-30',
     };
@@ -297,7 +251,6 @@ describe('PUT /api/investments/[id]', () => {
   it('clears the stored notes when the payload notes field is an empty string', async () => {
     const updated: Investment = {
       id: 'inv-001',
-      labels: [],
       ...validPayload,
       notes: undefined,
     };
@@ -315,7 +268,7 @@ describe('PUT /api/investments/[id]', () => {
   });
 
   it('ignores a client-provided id in the payload', async () => {
-    const updated: Investment = { id: 'inv-001', labels: [], ...validPayload };
+    const updated: Investment = { id: 'inv-001', ...validPayload };
     (updateInvestment as unknown as vi.Mock).mockResolvedValue(updated);
 
     await PUT(
