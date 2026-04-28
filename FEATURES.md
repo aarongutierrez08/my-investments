@@ -68,6 +68,10 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 
 - Users can export the currently shown investments list to a CSV file named `investments.csv` — `app/InvestmentsTable.tsx`
 
+## Auth
+
+- Users can sign up with email and password — `app/sign-up/SignUpForm.tsx`
+
 ## Sort
 
 - Investments are sorted by purchase amount descending by default — `app/InvestmentsTable.tsx`
