@@ -3,12 +3,24 @@ import { render, screen, within, fireEvent, waitFor } from '@testing-library/rea
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HomePage from './page';
 import { storage } from '../lib/storage';
+import { listInvestments } from '../lib/investments/storage';
 
 vi.mock('../lib/storage', () => ({
   storage: {
     readAll: vi.fn(),
   },
 }));
+
+vi.mock('../lib/investments/storage', () => ({
+  listInvestments: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(listInvestments).mockImplementation(async () => {
+    const result = await vi.mocked(storage.readAll)();
+    return result.investments;
+  });
+});
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

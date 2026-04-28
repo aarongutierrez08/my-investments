@@ -7,7 +7,8 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 ## Data model
 
 - Investment entity with instrument, amount, price, purchase date, category, labels and notes — `lib/types.ts`
-- JSON-file storage for investments and labels — `lib/storage.ts`
+- JSON-file storage for labels — `lib/storage.ts`
+- Supabase-backed persistence for investments (CRUD) — `lib/investments/storage.ts`
 
 ## Create
 
