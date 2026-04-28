@@ -73,6 +73,7 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 - Users can sign up with email and password — `app/sign-up/SignUpForm.tsx`
 - Users can sign in with email and password — `app/sign-in/SignInForm.tsx`
 - Visitors can navigate from the sign-up page to the sign-in page via a link — `app/sign-up/SignUpForm.tsx`
+- Signed-in users can sign out from the home page and are redirected to the sign-in page — `app/sign-out/SignOutButton.tsx`
 
 ## Sort
 
