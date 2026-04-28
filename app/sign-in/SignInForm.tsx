@@ -6,25 +6,25 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { supabase } from '../../lib/supabase';
 
-const signUpSchema = z.object({
+const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(1, 'Password is required'),
 });
 
-export type SignUpFn = (params: { email: string; password: string }) => Promise<void>;
+export type SignInFn = (params: { email: string; password: string }) => Promise<void>;
 
-const defaultSignUp: SignUpFn = async ({ email, password }) => {
-  const { error } = await supabase.auth.signUp({ email, password });
+const defaultSignIn: SignInFn = async ({ email, password }) => {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     throw new Error(error.message);
   }
 };
 
-interface SignUpFormProps {
-  signUp?: SignUpFn;
+interface SignInFormProps {
+  signIn?: SignInFn;
 }
 
-export function SignUpForm({ signUp = defaultSignUp }: SignUpFormProps) {
+export function SignInForm({ signIn = defaultSignIn }: SignInFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export function SignUpForm({ signUp = defaultSignUp }: SignUpFormProps) {
     setError(null);
 
     const formData = new FormData(event.currentTarget);
-    const parsed = signUpSchema.safeParse({
+    const parsed = signInSchema.safeParse({
       email: String(formData.get('email') ?? ''),
       password: String(formData.get('password') ?? ''),
     });
@@ -46,9 +46,9 @@ export function SignUpForm({ signUp = defaultSignUp }: SignUpFormProps) {
 
     startTransition(async () => {
       try {
-        await signUp(parsed.data);
+        await signIn(parsed.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not sign up, try again');
+        setError(err instanceof Error ? err.message : 'Could not sign in, try again');
         return;
       }
 
@@ -87,7 +87,6 @@ export function SignUpForm({ signUp = defaultSignUp }: SignUpFormProps) {
           name="password"
           type="password"
           required
-          minLength={8}
           className="w-full border border-gray-300 rounded px-3 py-2"
         />
       </div>
@@ -97,13 +96,13 @@ export function SignUpForm({ signUp = defaultSignUp }: SignUpFormProps) {
         disabled={isPending}
         className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold px-4 py-2 rounded"
       >
-        {isPending ? 'Signing up…' : 'Sign up'}
+        {isPending ? 'Signing in…' : 'Sign in'}
       </button>
 
       <p className="text-sm text-gray-600">
-        Already have an account?{' '}
-        <Link href="/sign-in" className="text-blue-600 hover:underline">
-          Sign in
+        Don&apos;t have an account?{' '}
+        <Link href="/sign-up" className="text-blue-600 hover:underline">
+          Sign up
         </Link>
       </p>
     </form>

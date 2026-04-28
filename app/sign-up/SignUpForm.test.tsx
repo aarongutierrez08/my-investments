@@ -38,6 +38,14 @@ describe('SignUpForm', () => {
     expect(button.type).toBe('submit');
   });
 
+  it('renders a link to /sign-in for users who already have an account', () => {
+    render(<SignUpForm signUp={vi.fn()} />);
+
+    const link = screen.getByRole('link', { name: /sign in/i }) as HTMLAnchorElement;
+    expect(link).toBeInTheDocument();
+    expect(link.getAttribute('href')).toBe('/sign-in');
+  });
+
   it('calls signUp once with the entered email and password and redirects to / on success', async () => {
     const signUp = vi.fn().mockResolvedValue(undefined);
     render(<SignUpForm signUp={signUp} />);
