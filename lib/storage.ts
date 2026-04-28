@@ -36,38 +36,6 @@ async function readAll(filePath: string = DEFAULT_DATA_FILE_PATH): Promise<Portf
   }
 }
 
-async function writeAll(
-  data: PortfolioData,
-  filePath: string = DEFAULT_DATA_FILE_PATH,
-): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-async function addLabel(
-  label: Label,
-  filePath: string = DEFAULT_DATA_FILE_PATH,
-): Promise<void> {
-  const portfolio = await readAll(filePath);
-  portfolio.labels.push(label);
-  await writeAll(portfolio, filePath);
-}
-
-async function removeLabel(
-  id: string,
-  filePath: string = DEFAULT_DATA_FILE_PATH,
-): Promise<void> {
-  const portfolio = await readAll(filePath);
-  portfolio.labels = portfolio.labels.filter((lbl) => lbl.id !== id);
-  portfolio.investments = portfolio.investments.map((inv) => ({
-    ...inv,
-    labelIds: inv.labelIds.filter((labelId) => labelId !== id),
-  }));
-  await writeAll(portfolio, filePath);
-}
-
 export const storage = {
   readAll,
-  addLabel,
-  removeLabel,
 };

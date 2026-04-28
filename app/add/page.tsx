@@ -1,8 +1,8 @@
-import { storage } from '../../lib/storage';
+import { listLabels } from '../../lib/labels/storage';
 import { AddInvestmentForm } from './AddInvestmentForm';
 
 export default async function AddPage() {
-  const { labels } = await storage.readAll();
+  const labels = await listLabels();
   const today = new Date().toISOString().slice(0, 10);
 
   return (
