@@ -71,6 +71,8 @@ Format: `- <one-line capability from the user's perspective> — \`<primary file
 ## Auth
 
 - Users can sign up with email and password — `app/sign-up/SignUpForm.tsx`
+- Users can sign in with email and password — `app/sign-in/SignInForm.tsx`
+- Visitors can navigate from the sign-up page to the sign-in page via a link — `app/sign-up/SignUpForm.tsx`
 
 ## Sort
 
