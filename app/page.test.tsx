@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HomePage from './page';
 import { storage } from '../lib/storage';
 import { listInvestments } from '../lib/investments/storage';
+import { listLabels } from '../lib/labels/storage';
 
 vi.mock('../lib/storage', () => ({
   storage: {
@@ -15,10 +16,18 @@ vi.mock('../lib/investments/storage', () => ({
   listInvestments: vi.fn(),
 }));
 
+vi.mock('../lib/labels/storage', () => ({
+  listLabels: vi.fn(),
+}));
+
 beforeEach(() => {
   vi.mocked(listInvestments).mockImplementation(async () => {
     const result = await vi.mocked(storage.readAll)();
     return result.investments;
+  });
+  vi.mocked(listLabels).mockImplementation(async () => {
+    const result = await vi.mocked(storage.readAll)();
+    return result.labels;
   });
 });
 

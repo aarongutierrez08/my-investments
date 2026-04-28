@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { storage } from '../../../lib/storage';
 import { getInvestment } from '../../../lib/investments/storage';
+import { listLabels } from '../../../lib/labels/storage';
 import { EditInvestmentForm } from './EditInvestmentForm';
 
 interface EditPageProps {
@@ -9,9 +9,9 @@ interface EditPageProps {
 
 export default async function EditPage({ params }: EditPageProps) {
   const { id } = await params;
-  const [investment, { labels }] = await Promise.all([
+  const [investment, labels] = await Promise.all([
     getInvestment(id),
-    storage.readAll(),
+    listLabels(),
   ]);
 
   if (!investment) {

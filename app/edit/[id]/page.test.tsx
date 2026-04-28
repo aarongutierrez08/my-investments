@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EditPage from './page';
 import { storage } from '../../../lib/storage';
 import { getInvestment } from '../../../lib/investments/storage';
+import { listLabels } from '../../../lib/labels/storage';
 
 vi.mock('../../../lib/storage', () => ({
   storage: {
@@ -13,6 +14,10 @@ vi.mock('../../../lib/storage', () => ({
 
 vi.mock('../../../lib/investments/storage', () => ({
   getInvestment: vi.fn(),
+}));
+
+vi.mock('../../../lib/labels/storage', () => ({
+  listLabels: vi.fn(),
 }));
 
 const notFoundError = new Error('NEXT_NOT_FOUND');
@@ -49,6 +54,10 @@ describe('EditPage', () => {
     vi.mocked(getInvestment).mockImplementation(async (id: string) => {
       const result = await vi.mocked(storage.readAll)();
       return result.investments.find((inv) => inv.id === id) ?? null;
+    });
+    vi.mocked(listLabels).mockImplementation(async () => {
+      const result = await vi.mocked(storage.readAll)();
+      return result.labels;
     });
   });
 

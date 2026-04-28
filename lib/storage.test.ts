@@ -3,13 +3,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { storage } from './storage';
-import { Investment, Label } from './types';
-import { v4 as uuidv4 } from 'uuid';
 
 const TEST_DATA_DIR = path.join(__dirname, '..', 'data_test');
 const TEST_DATA_FILE = path.join(TEST_DATA_DIR, 'portfolio.json');
 
-describe('Storage Module (labels-only)', () => {
+describe('Storage Module (legacy JSON read)', () => {
   beforeEach(async () => {
     await fs.mkdir(TEST_DATA_DIR, { recursive: true });
     await fs.writeFile(
@@ -27,63 +25,6 @@ describe('Storage Module (labels-only)', () => {
     await fs.unlink(TEST_DATA_FILE);
     const portfolio = await storage.readAll(TEST_DATA_FILE);
     expect(portfolio).toEqual({ investments: [], labels: [] });
-  });
-
-  it('should add a label and retrieve it', async () => {
-    const newLabel: Label = {
-      id: uuidv4(),
-      name: 'high-risk',
-      color: '#FF0000',
-    };
-
-    await storage.addLabel(newLabel, TEST_DATA_FILE);
-
-    const portfolio = await storage.readAll(TEST_DATA_FILE);
-    expect(portfolio.labels).toHaveLength(1);
-    expect(portfolio.labels[0]).toEqual(newLabel);
-  });
-
-  it('should remove a label and strip it from investment records on disk', async () => {
-    const labelToRemove: Label = {
-      id: uuidv4(),
-      name: 'long-term',
-      color: '#00FF00',
-    };
-    const labelToKeep: Label = {
-      id: uuidv4(),
-      name: 'short-term',
-      color: '#FFFF00',
-    };
-    const investmentWithBoth: Investment = {
-      id: uuidv4(),
-      instrument: 'BTC',
-      amount: 1,
-      price: 50000,
-      purchaseDate: new Date().toISOString(),
-      category: 'Crypto',
-      labelIds: [labelToRemove.id, labelToKeep.id],
-      labels: [],
-    };
-    await fs.writeFile(
-      TEST_DATA_FILE,
-      JSON.stringify(
-        {
-          investments: [investmentWithBoth],
-          labels: [labelToRemove, labelToKeep],
-        },
-        null,
-        2,
-      ),
-      'utf-8',
-    );
-
-    await storage.removeLabel(labelToRemove.id, TEST_DATA_FILE);
-
-    const portfolio = await storage.readAll(TEST_DATA_FILE);
-    expect(portfolio.labels).toHaveLength(1);
-    expect(portfolio.labels[0]).toEqual(labelToKeep);
-    const updated = portfolio.investments.find((inv) => inv.id === investmentWithBoth.id);
-    expect(updated?.labelIds).toEqual([labelToKeep.id]);
   });
 
   describe('legacy category backfill', () => {

@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { storage } from '../lib/storage';
 import { listInvestments } from '../lib/investments/storage';
+import { listLabels } from '../lib/labels/storage';
 import { InvestmentsTable } from './InvestmentsTable';
 
 export default async function HomePage() {
-  const [investments, { labels }] = await Promise.all([
+  const [investments, labels] = await Promise.all([
     listInvestments(),
-    storage.readAll(),
+    listLabels(),
   ]);
 
   return (
