@@ -35,7 +35,7 @@ Anti-priorities:
 ---
 
 ## Stage 2 — Persistencia sin auth (single-user sobre Supabase)
-Status: active
+Status: complete
 Goal: Reemplazar el JSON storage por Supabase. La app sigue single-user (sin login aún). Todas las features existentes siguen funcionando pero ahora los datos viven en Postgres.
 
 Completion criteria:
@@ -54,7 +54,7 @@ Anti-priorities:
 ---
 
 ## Stage 3 — Auth single-user
-Status: pending
+Status: active
 Goal: Añadir email+password auth. La app sigue single-user (una sola sesión), sin RLS aún. Todas las rutas quedan protegidas.
 
 Completion criteria:
