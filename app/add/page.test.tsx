@@ -2,15 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AddPage from './page';
-import { storage } from '../../lib/storage';
 import { listLabels } from '../../lib/labels/storage';
 import { CATEGORIES } from '../../lib/types';
-
-vi.mock('../../lib/storage', () => ({
-  storage: {
-    readAll: vi.fn(),
-  },
-}));
 
 vi.mock('../../lib/labels/storage', () => ({
   listLabels: vi.fn(),
@@ -33,17 +26,10 @@ describe('AddPage', () => {
     vi.clearAllMocks();
     pushMock.mockClear();
     refreshMock.mockClear();
-    (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-      investments: [],
-      labels: [
-        { id: 'lbl-longterm', name: 'long-term', color: '#059669' },
-        { id: 'lbl-highrisk', name: 'high-risk', color: '#dc2626' },
-      ],
-    });
-    vi.mocked(listLabels).mockImplementation(async () => {
-      const result = await vi.mocked(storage.readAll)();
-      return result.labels;
-    });
+    vi.mocked(listLabels).mockResolvedValue([
+      { id: 'lbl-longterm', name: 'long-term', color: '#059669' },
+      { id: 'lbl-highrisk', name: 'high-risk', color: '#dc2626' },
+    ]);
   });
 
   afterEach(() => {

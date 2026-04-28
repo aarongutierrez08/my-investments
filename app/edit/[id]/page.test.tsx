@@ -2,15 +2,9 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EditPage from './page';
-import { storage } from '../../../lib/storage';
 import { getInvestment } from '../../../lib/investments/storage';
 import { listLabels } from '../../../lib/labels/storage';
-
-vi.mock('../../../lib/storage', () => ({
-  storage: {
-    readAll: vi.fn(),
-  },
-}));
+import type { Investment } from '../../../lib/types';
 
 vi.mock('../../../lib/investments/storage', () => ({
   getInvestment: vi.fn(),
@@ -47,18 +41,10 @@ const mockInvestment = {
 describe('EditPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (storage.readAll as unknown as vi.Mock).mockResolvedValue({
-      investments: [mockInvestment],
-      labels: [mockLabel],
-    });
     vi.mocked(getInvestment).mockImplementation(async (id: string) => {
-      const result = await vi.mocked(storage.readAll)();
-      return result.investments.find((inv) => inv.id === id) ?? null;
+      return id === mockInvestment.id ? (mockInvestment as Investment) : null;
     });
-    vi.mocked(listLabels).mockImplementation(async () => {
-      const result = await vi.mocked(storage.readAll)();
-      return result.labels;
-    });
+    vi.mocked(listLabels).mockResolvedValue([mockLabel]);
   });
 
   it('renders the form pre-filled with the investment values when the id exists', async () => {

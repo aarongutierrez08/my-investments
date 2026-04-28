@@ -2,15 +2,9 @@ import React from 'react';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HomePage from './page';
-import { storage } from '../lib/storage';
 import { listInvestments } from '../lib/investments/storage';
 import { listLabels } from '../lib/labels/storage';
-
-vi.mock('../lib/storage', () => ({
-  storage: {
-    readAll: vi.fn(),
-  },
-}));
+import type { Investment, Label } from '../lib/types';
 
 vi.mock('../lib/investments/storage', () => ({
   listInvestments: vi.fn(),
@@ -20,16 +14,16 @@ vi.mock('../lib/labels/storage', () => ({
   listLabels: vi.fn(),
 }));
 
-beforeEach(() => {
-  vi.mocked(listInvestments).mockImplementation(async () => {
-    const result = await vi.mocked(storage.readAll)();
-    return result.investments;
-  });
-  vi.mocked(listLabels).mockImplementation(async () => {
-    const result = await vi.mocked(storage.readAll)();
-    return result.labels;
-  });
-});
+function mockPortfolio({
+  investments,
+  labels,
+}: {
+  investments: unknown[];
+  labels: unknown[];
+}): void {
+  vi.mocked(listInvestments).mockResolvedValue(investments as Investment[]);
+  vi.mocked(listLabels).mockResolvedValue(labels as Label[]);
+}
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -40,7 +34,7 @@ vi.mock('next/navigation', () => ({
 
 describe('HomePage', () => {
   it('AC-001: displays a message when there are no investments', async () => {
-    (storage.readAll as vi.Mock).mockResolvedValue({
+    mockPortfolio({
       investments: [],
       labels: [],
     });
@@ -54,7 +48,7 @@ describe('HomePage', () => {
   });
 
   it('renders an "Add investment" link that points to /add', async () => {
-    (storage.readAll as vi.Mock).mockResolvedValue({
+    mockPortfolio({
       investments: [],
       labels: [],
     });
@@ -93,7 +87,7 @@ describe('HomePage', () => {
       notes: 'Ethereum',
     };
 
-    (storage.readAll as vi.Mock).mockResolvedValue({
+    mockPortfolio({
       investments: [mockInvestment1, mockInvestment2],
       labels: [mockLabel1, mockLabel2],
     });
@@ -166,7 +160,7 @@ describe('HomePage', () => {
     };
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [mockStocks, mockCrypto, mockBonds],
         labels: [],
       });
@@ -280,7 +274,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: renders a chip for each label attached to the investment', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithOneLabel],
         labels: [labelGrowth, labelHighRisk],
       });
@@ -293,7 +287,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: renders no chip and no placeholder when labelIds is empty', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithoutLabels],
         labels: [labelGrowth, labelHighRisk],
       });
@@ -308,7 +302,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: each row shows only its own labels (no cross-row leakage)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithOneLabel, invWithOtherLabel],
         labels: [labelGrowth, labelHighRisk],
       });
@@ -347,7 +341,7 @@ describe('HomePage', () => {
         labels: ['crypto', 'long-term'],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investment],
         labels: [],
       });
@@ -372,7 +366,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investment],
         labels: [],
       });
@@ -414,7 +408,7 @@ describe('HomePage', () => {
         category: 'Stocks',
         labelIds: [],
       };
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -426,7 +420,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: shows "Total invested: $0" when the investments list is empty', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -456,7 +450,7 @@ describe('HomePage', () => {
         category: 'Crypto',
         labelIds: [],
       };
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv],
         labels: [],
       });
@@ -500,7 +494,7 @@ describe('HomePage', () => {
         category: 'Bonds',
         labelIds: [],
       };
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv, bondInv],
         labels: [],
       });
@@ -515,7 +509,7 @@ describe('HomePage', () => {
     });
 
     it('shows "Total invested (filtered): $0" when an active search matches no investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -549,7 +543,7 @@ describe('HomePage', () => {
     });
 
     it('uses the unfiltered "Total invested" label and full sum when no filters are active', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -611,7 +605,7 @@ describe('HomePage', () => {
     };
 
     it('AC-001: shows the total number of investments with plural wording when no filters are active', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv, bondInv],
         labels: [],
       });
@@ -623,7 +617,7 @@ describe('HomePage', () => {
     });
 
     it('AC-001: uses the singular label when exactly one investment is shown', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv],
         labels: [],
       });
@@ -635,7 +629,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the count when a category filter narrows the list', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv, bondInv],
         labels: [],
       });
@@ -652,7 +646,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the count when the search box narrows the list', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv, bondInv],
         labels: [],
       });
@@ -667,7 +661,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the count when a date range narrows the list', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv, bondInv],
         labels: [],
       });
@@ -688,7 +682,7 @@ describe('HomePage', () => {
         ...stockInv,
         labels: ['long-term'],
       };
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [withLabel, cryptoInv, bondInv],
         labels: [],
       });
@@ -703,7 +697,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: shows "Showing 0 investments" when the active filters match nothing', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stockInv, cryptoInv],
         labels: [],
       });
@@ -718,7 +712,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: shows "Showing 0 investments" when the list is empty with no filters', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -763,7 +757,7 @@ describe('HomePage', () => {
     };
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invCryptoLong, invStockLong, invStockShort],
         labels: [],
       });
@@ -881,7 +875,7 @@ describe('HomePage', () => {
     }
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invMicrosoft, invBitcoin],
         labels: [],
       });
@@ -1020,7 +1014,7 @@ describe('HomePage', () => {
     }
 
     it('uses "Search by name, label or notes" as the placeholder', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple],
         labels: [],
       });
@@ -1032,7 +1026,7 @@ describe('HomePage', () => {
     });
 
     it('AC-001: typing a label text shows only rows whose labels match', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invTesla],
         labels: [],
       });
@@ -1049,7 +1043,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: matches label text case-insensitively', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invMeta],
         labels: [],
       });
@@ -1066,7 +1060,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: combines with an active category filter using AND (name OR label within category)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invMeta, invBtc],
         labels: [],
       });
@@ -1087,7 +1081,7 @@ describe('HomePage', () => {
 
   describe('total by category breakdown', () => {
     it('AC-001: shows a row per category with the sum of investment amounts', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1131,7 +1125,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: groups investments without a category under an "Uncategorized" row', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1171,7 +1165,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: does not render the breakdown section when there are no investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -1185,7 +1179,7 @@ describe('HomePage', () => {
     });
 
     it('does not list categories that have no investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1211,7 +1205,7 @@ describe('HomePage', () => {
 
   describe("issue #59: each category's share of the portfolio", () => {
     it('AC-001: each per-category total shows its rounded percentage of the filtered total', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 't1',
@@ -1256,7 +1250,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: percentages recompute against the new filtered total when filters change', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1296,7 +1290,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: does not render a percentage when the filtered total is 0', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1327,7 +1321,7 @@ describe('HomePage', () => {
 
   describe('issue #96: investment count per category', () => {
     it('AC-001: each category row shows the count of investments belonging to that category', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1402,7 +1396,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: uses singular wording when the category has exactly one investment', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1426,7 +1420,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: counts reflect the currently active filter', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 's1',
@@ -1531,7 +1525,7 @@ describe('HomePage', () => {
     }
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invSmall, invLarge, invMid],
         labels: [],
       });
@@ -1621,7 +1615,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: exposes a "Sort by date" control alongside the existing "Sort by amount" control', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invOldDate, invMidDate, invNewDate],
         labels: [],
       });
@@ -1634,7 +1628,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: sorts rows newest first when "Date (newest first)" is selected', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invOldDate, invNewDate, invMidDate],
         labels: [],
       });
@@ -1649,7 +1643,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: sorts rows oldest first when "Date (oldest first)" is selected', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invOldDate, invNewDate, invMidDate],
         labels: [],
       });
@@ -1665,7 +1659,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: places investments without a purchase date at the bottom when sorting newest first', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invNoDate, invOldDate, invNewDate, invMidDate],
         labels: [],
       });
@@ -1680,7 +1674,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003 (#98): places investments without a purchase date at the bottom when sorting oldest first', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invOldDate, invNewDate, invNoDate, invMidDate],
         labels: [],
       });
@@ -1727,7 +1721,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv2023, inv2021, inv2024],
         labels: [],
       });
@@ -1743,7 +1737,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003 (#98): switching from oldest-first back to default amount sort restores amount descending order', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invOldDate, invNewDate, invMidDate],
         labels: [],
       });
@@ -1765,7 +1759,7 @@ describe('HomePage', () => {
     });
 
     it('AC-004: amount sort still works after the date sort options are introduced (regression)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invMidDate, invOldDate, invNewDate],
         labels: [],
       });
@@ -1830,7 +1824,7 @@ describe('HomePage', () => {
     }
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invOldDate, invNewDate, invMidDate],
         labels: [],
       });
@@ -1911,7 +1905,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: exposes a "Sort by name" control alongside the existing sort controls', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invBanana, invCherry],
         labels: [],
       });
@@ -1925,7 +1919,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: sorts rows A–Z (case-insensitive) on first click', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invCherry, invApple, invBanana],
         labels: [],
       });
@@ -1940,7 +1934,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: sorts rows Z–A on second click', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invBanana, invCherry],
         labels: [],
       });
@@ -1987,7 +1981,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invBravo, invAvila, invAlvarez],
         labels: [],
       });
@@ -2037,7 +2031,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZebra, invAppleAccented, invApplePlain],
         labels: [],
       });
@@ -2054,7 +2048,7 @@ describe('HomePage', () => {
     });
 
     it('third click returns to insertion order', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invCherry, invApple, invBanana],
         labels: [],
       });
@@ -2071,7 +2065,7 @@ describe('HomePage', () => {
     });
 
     it('name sort replaces the default amount sort (mutually exclusive)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invBanana, invCherry],
         labels: [],
       });
@@ -2091,7 +2085,7 @@ describe('HomePage', () => {
     });
 
     it('name sort replaces an active date sort (mutually exclusive)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invApple, invBanana, invCherry],
         labels: [],
       });
@@ -2110,7 +2104,7 @@ describe('HomePage', () => {
     });
 
     it('does not alter the default amount-desc sort order before any name sort is applied', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invCherry, invApple, invBanana],
         labels: [],
       });
@@ -2175,7 +2169,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: exposes a "Sort by category" control alongside the existing sort controls', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invBonds, invCrypto],
         labels: [],
       });
@@ -2187,7 +2181,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: reorders rows by category name ascending (A→Z) when selected', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invBonds, invCrypto],
         labels: [],
       });
@@ -2202,7 +2196,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: places uncategorized investments after all categorized ones', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invNoCategory, invBonds],
         labels: [],
       });
@@ -2221,7 +2215,7 @@ describe('HomePage', () => {
       const invStocksB = { ...invStocks, id: 'stock-b', instrument: 'BSECOND' };
       const invStocksC = { ...invStocks, id: 'stock-c', instrument: 'CTHIRD' };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocksA, invStocksB, invStocksC],
         labels: [],
       });
@@ -2236,7 +2230,7 @@ describe('HomePage', () => {
     });
 
     it('category sort replaces an active amount sort (mutually exclusive)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invBonds, invCrypto],
         labels: [],
       });
@@ -2253,7 +2247,7 @@ describe('HomePage', () => {
     });
 
     it('#61 AC-001: reorders rows by category name descending (Z→A) on second click', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invBonds, invCrypto, invStocks],
         labels: [],
       });
@@ -2272,7 +2266,7 @@ describe('HomePage', () => {
     });
 
     it('#61 AC-002: places uncategorized investments after all categorized ones when sorting Z→A', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invNoCategory, invBonds],
         labels: [],
       });
@@ -2288,7 +2282,7 @@ describe('HomePage', () => {
     });
 
     it('#61 AC-003: third click advances the toggle cycle to the unsorted state', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invBonds, invCrypto],
         labels: [],
       });
@@ -2311,7 +2305,7 @@ describe('HomePage', () => {
       const invStocksB = { ...invStocks, id: 'stock-b', instrument: 'BSECOND' };
       const invStocksC = { ...invStocks, id: 'stock-c', instrument: 'CTHIRD' };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocksA, invStocksB, invStocksC],
         labels: [],
       });
@@ -2348,7 +2342,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invAmbar, invZafiro],
         labels: [],
       });
@@ -2419,7 +2413,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: first click on the Labels header sorts rows A→Z by each investment\'s first label', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZeta, invAlpha, invMango],
         labels: [],
       });
@@ -2437,7 +2431,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: second click on the Labels header sorts rows Z→A', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZeta, invAlpha, invMango],
         labels: [],
       });
@@ -2456,7 +2450,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: unlabeled investments appear after every labeled one in both directions', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZeta, invNoLabels, invAlpha, invMango],
         labels: [],
       });
@@ -2506,7 +2500,7 @@ describe('HomePage', () => {
         labels: ['z'],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZ, invDeltaBeta, invAardvark],
         labels: [],
       });
@@ -2542,7 +2536,7 @@ describe('HomePage', () => {
         labels: ['banana'],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invLowercase, invUppercase],
         labels: [],
       });
@@ -2557,7 +2551,7 @@ describe('HomePage', () => {
     });
 
     it('third click clears the label sort, matching other sortable columns', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZeta, invAlpha, invMango],
         labels: [],
       });
@@ -2576,7 +2570,7 @@ describe('HomePage', () => {
     });
 
     it('label sort replaces an active amount sort (mutually exclusive)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invZeta, invAlpha, invMango],
         labels: [],
       });
@@ -2637,7 +2631,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv100, inv500, inv250],
         labels: [],
       });
@@ -2680,7 +2674,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv100, inv500, inv250],
         labels: [],
       });
@@ -2708,7 +2702,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [onlyInvestment],
         labels: [],
       });
@@ -2740,7 +2734,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investment],
         labels: [],
       });
@@ -2764,7 +2758,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [legacyInvestment],
         labels: [],
       });
@@ -2809,7 +2803,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invA, invB, invC],
         labels: [],
       });
@@ -2883,7 +2877,7 @@ describe('HomePage', () => {
     }
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invJan, invFeb, invMar, invApr],
         labels: [],
       });
@@ -3019,7 +3013,7 @@ describe('HomePage', () => {
     };
 
     beforeEach(() => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [mockInvestment1, mockInvestment2],
         labels: [],
       });
@@ -3151,7 +3145,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: picking a category narrows the rows, totals and count to that subset', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stocksA, stocksB, cryptoA],
         labels: [],
       });
@@ -3168,7 +3162,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: selecting "All categories" restores the full list, totals and count', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stocksA, stocksB, cryptoA],
         labels: [],
       });
@@ -3188,7 +3182,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: combining a search term and a category shows rows matching BOTH', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stocksA, stocksB, cryptoA],
         labels: [],
       });
@@ -3206,7 +3200,7 @@ describe('HomePage', () => {
     });
 
     it('the dropdown only lists categories present in the loaded data, plus "All categories"', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [stocksA, cryptoA],
         labels: [],
       });
@@ -3223,7 +3217,7 @@ describe('HomePage', () => {
     });
 
     it('the dropdown still offers "All categories" when no investments are loaded', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             ...stocksA,
@@ -3267,7 +3261,7 @@ describe('HomePage', () => {
         notes: 'Bought after earnings call',
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investment],
         labels: [],
       });
@@ -3291,7 +3285,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investmentWithoutNotes],
         labels: [],
       });
@@ -3320,7 +3314,7 @@ describe('HomePage', () => {
         notes: '',
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investmentWithEmptyNotes],
         labels: [],
       });
@@ -3353,7 +3347,7 @@ describe('HomePage', () => {
         notes: longNote,
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [investment],
         labels: [],
       });
@@ -3371,7 +3365,7 @@ describe('HomePage', () => {
 
   describe('issue #72: total invested per custom label', () => {
     it('AC-001: shows a row per label with the sum of amounts of every investment that carries that label', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -3408,7 +3402,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: excludes untagged investments from the per-label totals but keeps them in the overall total', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'tagged',
@@ -3446,7 +3440,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: does not render the per-label totals block when no investment carries any label', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -3480,7 +3474,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: each label row shows the count of investments carrying that label with singular/plural wording', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -3536,7 +3530,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: per-label counts reflect the currently active category filter', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -3585,7 +3579,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: an investment carrying multiple labels contributes one to each label count', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -3659,7 +3653,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: typing a query that matches only the notes filters out non-matching rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithBonus, invWithoutMatch],
         labels: [],
       });
@@ -3677,7 +3671,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: matches notes case-insensitively (typing "BONUS" matches notes "bonus")', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithBonus, invWithoutMatch],
         labels: [],
       });
@@ -3704,7 +3698,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invNoNotesNameMatch, invWithoutMatch],
         labels: [],
       });
@@ -3720,7 +3714,7 @@ describe('HomePage', () => {
     });
 
     it('AC-004: placeholder communicates that search covers name, label and notes', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithBonus],
         labels: [],
       });
@@ -3778,7 +3772,7 @@ describe('HomePage', () => {
     }
 
     it('AC-002: entering a minimum amount keeps only investments at or above it, and the summaries reflect the subset', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invSmall, invMedium, invLarge],
         labels: [],
       });
@@ -3799,7 +3793,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: entering a maximum amount keeps only investments at or below it', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invSmall, invMedium, invLarge],
         labels: [],
       });
@@ -3861,7 +3855,7 @@ describe('HomePage', () => {
         labels: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks200, invStocks700, invStocks900, invCrypto500],
         labels: [],
       });
@@ -3887,7 +3881,7 @@ describe('HomePage', () => {
     });
 
     it('AC-001: Min amount and Max amount inputs start empty so no amount filtering is applied', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invSmall, invMedium, invLarge],
         labels: [],
       });
@@ -3907,7 +3901,7 @@ describe('HomePage', () => {
     });
 
     it('ignores a negative minimum (treats it as unset)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invSmall, invMedium, invLarge],
         labels: [],
       });
@@ -3971,7 +3965,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: clicking "Clear filters" resets an active search term and restores all rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invCrypto, invBonds],
         labels: [],
       });
@@ -3994,7 +3988,7 @@ describe('HomePage', () => {
     });
 
     it('AC-001: clicking "Clear filters" resets a selected category filter and restores all rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invCrypto, invBonds],
         labels: [],
       });
@@ -4026,7 +4020,7 @@ describe('HomePage', () => {
         labels: ['growth'],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithLabel, invCrypto, invBonds],
         labels: [],
       });
@@ -4072,7 +4066,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: the "Clear filters" button is not actionable when no filter is active', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invCrypto, invBonds],
         labels: [],
       });
@@ -4089,7 +4083,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: clicking "Clear filters" preserves the current sort order', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invStocks, invCrypto, invBonds],
         labels: [],
       });
@@ -4178,7 +4172,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: checking "Only with notes" leaves only investments with non-empty notes', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes, invWithEmptyNotes, invWithWhitespaceNotes, invWithoutNotes],
         labels: [],
       });
@@ -4196,7 +4190,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: "Clear filters" also unchecks "Only with notes" and restores all rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes, invWithEmptyNotes, invWithoutNotes],
         labels: [],
       });
@@ -4220,7 +4214,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: totals and match count reflect the filtered set when "Only with notes" is on', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes, invWithEmptyNotes, invWithoutNotes],
         labels: [],
       });
@@ -4288,7 +4282,7 @@ describe('HomePage', () => {
     });
 
     it('AC-001: renders an Export CSV button alongside the filter controls', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invAAPL, invBTC],
         labels: [],
       });
@@ -4302,7 +4296,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: clicking Export CSV downloads a file named investments.csv containing only the filtered rows in the displayed order', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invAAPL, invMSFT, invBTC],
         labels: [],
       });
@@ -4354,7 +4348,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: clicking Export CSV with an empty filtered list still produces a CSV with only the header row', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invAAPL, invBTC],
         labels: [],
       });
@@ -4392,7 +4386,7 @@ describe('HomePage', () => {
 
   describe('totals by purchase year', () => {
     it('AC-001: shows one row per year with the correct summed amount', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4439,7 +4433,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: per-year totals reflect only the filtered investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4488,7 +4482,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: years appear in descending order (newest first)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4546,7 +4540,7 @@ describe('HomePage', () => {
     });
 
     it('skips investments without a purchase date instead of grouping them as "Unknown"', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4585,7 +4579,7 @@ describe('HomePage', () => {
 
   describe("issue #108: each year's share of the portfolio", () => {
     it('AC-001: each per-year total line shows its percentage of the portfolio with one decimal', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4624,7 +4618,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: empty portfolio shows no per-year rows and no NaN% or Infinity% anywhere', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -4640,7 +4634,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: a single investment renders its year at (100.0%)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4670,7 +4664,7 @@ describe('HomePage', () => {
 
   describe('totals by purchase month', () => {
     it('AC-001: shows one row per month with the correct summed amount', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4717,7 +4711,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: per-month totals reflect only the filtered investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4766,7 +4760,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: months appear in descending order (newest first)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           {
             id: 'i1',
@@ -4894,7 +4888,7 @@ describe('HomePage', () => {
     }
 
     it('AC-001: first click on the Notes header places rows with non-empty notes before rows without', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [
           invMissingNotes,
           invWithNotes1,
@@ -4917,7 +4911,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: second click on the Notes header places rows without notes before rows with notes', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes1, invEmptyNotes, invWithNotes2, invWhitespaceNotes, invMissingNotes],
         labels: [],
       });
@@ -4935,7 +4929,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: notes sort composes with an active category filter', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes1, invEmptyNotes, invWithNotes2, invWhitespaceNotes, invMissingNotes],
         labels: [],
       });
@@ -4953,7 +4947,7 @@ describe('HomePage', () => {
     });
 
     it('whitespace-only notes are treated as "no notes" (matches "Only with notes" filter rule)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWhitespaceNotes, invWithNotes1],
         labels: [],
       });
@@ -4972,7 +4966,7 @@ describe('HomePage', () => {
       const big = { ...invWithNotes2, id: 'big', instrument: 'BIG', amount: 999 };
       const mid = { ...invWithNotes1, id: 'mid', instrument: 'MID', amount: 50 };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [small, big, mid],
         labels: [],
       });
@@ -4987,7 +4981,7 @@ describe('HomePage', () => {
     });
 
     it('third click clears the notes sort, matching other sortable columns', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes1, invEmptyNotes, invWithNotes2],
         labels: [],
       });
@@ -5006,7 +5000,7 @@ describe('HomePage', () => {
     });
 
     it('notes sort replaces an active amount sort (mutually exclusive)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes1, invEmptyNotes, invWithNotes2],
         labels: [],
       });
@@ -5025,7 +5019,7 @@ describe('HomePage', () => {
     });
 
     it('notes sort composes with the "Only with notes" filter (orders the remaining rows)', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [invWithNotes1, invEmptyNotes, invWithNotes2, invWhitespaceNotes, invMissingNotes],
         labels: [],
       });
@@ -5073,7 +5067,7 @@ describe('HomePage', () => {
     };
 
     it('AC-001: shows the arithmetic mean of amount * price across all investments when no filter is active', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5085,7 +5079,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the average when a category filter narrows the visible rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5100,7 +5094,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the average when the search box narrows the visible rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5115,7 +5109,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: shows "$0" without "NaN" when the active filter matches zero investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5131,7 +5125,7 @@ describe('HomePage', () => {
     });
 
     it('shows "Average: $0" when there are no investments at all', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -5174,7 +5168,7 @@ describe('HomePage', () => {
     };
 
     it('AC-001: shows the middle value of amount * price for an odd-count filtered view', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [oddInv1, oddInv2, oddInv3],
         labels: [],
       });
@@ -5205,7 +5199,7 @@ describe('HomePage', () => {
         labelIds: [],
       };
 
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [oddInv1, evenInv4, evenInv5, oddInv3],
         labels: [],
       });
@@ -5217,7 +5211,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the median when the filtered set changes', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [oddInv1, oddInv2, oddInv3],
         labels: [],
       });
@@ -5232,7 +5226,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: shows "Median: $0" when the filtered set is empty', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [oddInv1, oddInv2, oddInv3],
         labels: [],
       });
@@ -5248,7 +5242,7 @@ describe('HomePage', () => {
     });
 
     it('shows "Median: $0" when there are no investments at all', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -5291,7 +5285,7 @@ describe('HomePage', () => {
     };
 
     it('AC-001: shows the smallest and largest amount * price across all investments when no filter is active', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5304,7 +5298,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the min and max when a category filter narrows the visible rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5320,7 +5314,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the min and max when the search box narrows the visible rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5336,7 +5330,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: shows "$0" without "NaN" when the active filter matches zero investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5353,7 +5347,7 @@ describe('HomePage', () => {
     });
 
     it('shows "$0" when there are no investments at all', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });
@@ -5397,7 +5391,7 @@ describe('HomePage', () => {
     };
 
     it('AC-001: shows the population standard deviation of amount * price across all investments when no filter is active', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5412,7 +5406,7 @@ describe('HomePage', () => {
     });
 
     it('AC-002: updates the standard deviation when a filter narrows the visible rows', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5429,7 +5423,7 @@ describe('HomePage', () => {
     });
 
     it('AC-003: shows "$0" without "NaN" when the active filter matches zero investments', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [inv1, inv2, inv3],
         labels: [],
       });
@@ -5447,7 +5441,7 @@ describe('HomePage', () => {
     });
 
     it('shows "Standard deviation: $0" when there are no investments at all', async () => {
-      (storage.readAll as unknown as vi.Mock).mockResolvedValue({
+      mockPortfolio({
         investments: [],
         labels: [],
       });

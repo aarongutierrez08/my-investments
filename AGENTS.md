@@ -71,7 +71,6 @@ These are non-negotiable. The Developer must respect them; the Reviewer must enf
 - A Label name is unique **per user** (Stage 4+). In Stage 1–3, labels are effectively global because `user_id` is null.
 - Deleting a Label removes all its `investment_labels` rows but never deletes the Investment itself.
 - Deleting an Investment cascades to its `investment_labels` rows.
-- The legacy JSON file (`data/portfolio.json`) is the storage backend until Stage 2 completes. Stage 2 ends with the file no longer read or written.
 
 ## Code conventions
 
