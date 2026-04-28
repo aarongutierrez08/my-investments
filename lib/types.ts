@@ -19,6 +19,7 @@ export interface Investment {
   purchaseDate: string; // ISO date string
   category: Category;
   labelIds: string[]; // array of references to Label.id
+  labels: string[]; // free-text custom tags
   notes?: string; // optional string
 }
 

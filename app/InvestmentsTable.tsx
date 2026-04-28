@@ -36,6 +36,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('');
+  const [labelFilter, setLabelFilter] = useState<string>('');
   const [nameSearch, setNameSearch] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -46,7 +47,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   const [dateSortDirection, setDateSortDirection] = useState<SortDirection>(null);
   const [nameSortDirection, setNameSortDirection] = useState<SortDirection>(null);
   const [categorySortDirection, setCategorySortDirection] = useState<SortDirection>(null);
+  const [labelSortDirection, setLabelSortDirection] = useState<SortDirection>(null);
   const [notesSortDirection, setNotesSortDirection] = useState<NotesSortDirection>(null);
+
+  const availableLabels = useMemo(() => {
+    const unique = new Set<string>();
+    for (const investment of investments) {
+      for (const label of investment.labels ?? []) {
+        unique.add(label);
+      }
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [investments]);
 
   const availableCategories = useMemo(() => {
     const unique = new Set<Category>();
@@ -74,12 +86,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       if (categoryFilter && investment.category !== categoryFilter) {
         return false;
       }
+      if (labelFilter && !(investment.labels ?? []).includes(labelFilter)) {
+        return false;
+      }
       if (trimmedSearch) {
         const nameMatches = investment.instrument.toLowerCase().includes(trimmedSearch);
+        const labelMatches = (investment.labels ?? []).some((label) =>
+          label.toLowerCase().includes(trimmedSearch),
+        );
         const notesMatches = (investment.notes ?? '')
           .toLowerCase()
           .includes(trimmedSearch);
-        if (!nameMatches && !notesMatches) {
+        if (!nameMatches && !labelMatches && !notesMatches) {
           return false;
         }
       }
@@ -103,6 +121,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
   }, [
     investments,
     categoryFilter,
+    labelFilter,
     nameSearch,
     fromDate,
     toDate,
@@ -159,6 +178,28 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       });
       return sorted;
     }
+    if (labelSortDirection !== null) {
+      const firstLabel = (investment: Investment): string | null => {
+        const labels = investment.labels ?? [];
+        if (labels.length === 0) return null;
+        return [...labels].sort((x, y) =>
+          x.localeCompare(y, undefined, { sensitivity: 'base' }),
+        )[0];
+      };
+      const sorted = [...filteredInvestments];
+      sorted.sort((a, b) => {
+        const aFirst = firstLabel(a);
+        const bFirst = firstLabel(b);
+        if (aFirst === null && bFirst === null) return 0;
+        if (aFirst === null) return 1;
+        if (bFirst === null) return -1;
+        const comparison = aFirst.localeCompare(bFirst, undefined, {
+          sensitivity: 'base',
+        });
+        return labelSortDirection === 'asc' ? comparison : -comparison;
+      });
+      return sorted;
+    }
     if (notesSortDirection !== null) {
       const sorted = [...filteredInvestments];
       sorted.sort((a, b) => {
@@ -181,6 +222,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     dateSortDirection,
     nameSortDirection,
     categorySortDirection,
+    labelSortDirection,
     notesSortDirection,
   ]);
 
@@ -188,6 +230,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setDateSortDirection(null);
     setNameSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setNotesSortDirection(null);
     setSortDirection((prev) => {
       if (prev === null) return 'desc';
@@ -200,6 +243,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setSortDirection(null);
     setNameSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setNotesSortDirection(null);
     setDateSortDirection((prev) => {
       if (prev === null) return 'desc';
@@ -212,6 +256,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setSortDirection(null);
     setDateSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setNotesSortDirection(null);
     setNameSortDirection((prev) => {
       if (prev === null) return 'asc';
@@ -224,8 +269,22 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setSortDirection(null);
     setDateSortDirection(null);
     setNameSortDirection(null);
+    setLabelSortDirection(null);
     setNotesSortDirection(null);
     setCategorySortDirection((prev) => {
+      if (prev === null) return 'asc';
+      if (prev === 'asc') return 'desc';
+      return null;
+    });
+  }
+
+  function cycleLabelSortDirection() {
+    setSortDirection(null);
+    setDateSortDirection(null);
+    setNameSortDirection(null);
+    setCategorySortDirection(null);
+    setNotesSortDirection(null);
+    setLabelSortDirection((prev) => {
       if (prev === null) return 'asc';
       if (prev === 'asc') return 'desc';
       return null;
@@ -237,6 +296,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
     setDateSortDirection(null);
     setNameSortDirection(null);
     setCategorySortDirection(null);
+    setLabelSortDirection(null);
     setNotesSortDirection((prev) => {
       if (prev === null) return 'withFirst';
       if (prev === 'withFirst') return 'withoutFirst';
@@ -272,6 +332,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   const hasActiveFilters =
     categoryFilter !== '' ||
+    labelFilter !== '' ||
     nameSearch !== '' ||
     fromDate !== '' ||
     toDate !== '' ||
@@ -281,6 +342,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   const isFiltered =
     categoryFilter !== '' ||
+    labelFilter !== '' ||
     nameSearch.trim() !== '' ||
     fromDate !== '' ||
     toDate !== '' ||
@@ -297,6 +359,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
   function clearFilters() {
     setCategoryFilter('');
+    setLabelFilter('');
     setNameSearch('');
     setFromDate('');
     setToDate('');
@@ -319,6 +382,22 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
       });
     }
     return breakdown;
+  }, [filteredInvestments]);
+
+  const labelBreakdown = useMemo(() => {
+    const breakdown = new Map<string, { total: number; count: number }>();
+    for (const investment of filteredInvestments) {
+      for (const label of investment.labels ?? []) {
+        const existing = breakdown.get(label) ?? { total: 0, count: 0 };
+        breakdown.set(label, {
+          total: existing.total + investment.amount,
+          count: existing.count + 1,
+        });
+      }
+    }
+    return new Map(
+      Array.from(breakdown.entries()).sort(([a], [b]) => a.localeCompare(b)),
+    );
   }, [filteredInvestments]);
 
   const yearBreakdown = useMemo(() => {
@@ -461,6 +540,18 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
           </ul>
         </section>
       )}
+      {labelBreakdown.size > 0 && (
+        <section aria-labelledby="totals-by-label-heading" className="mb-6">
+          <h2 id="totals-by-label-heading" className="text-lg font-semibold mb-2">
+            Totals by label
+          </h2>
+          <ul className="list-disc list-inside">
+            {Array.from(labelBreakdown.entries()).map(([name, { total, count }]) => (
+              <li key={name}>{`${name}: $${total}${investmentCountSuffix(count)}`}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {yearBreakdown.length > 0 && (
         <section aria-labelledby="totals-by-year-heading" className="mb-6">
           <h2 id="totals-by-year-heading" className="text-lg font-semibold mb-2">
@@ -499,7 +590,7 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             type="text"
             value={nameSearch}
             onChange={(event) => setNameSearch(event.target.value)}
-            placeholder="Search by name or notes"
+            placeholder="Search by name, label or notes"
             className="border border-gray-300 rounded px-3 py-2"
           />
         </div>
@@ -517,6 +608,24 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
             {availableCategories.map((category) => (
               <option key={category} value={category}>
                 {category}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="label-filter" className="block text-sm font-medium mb-1">
+            Filter by label
+          </label>
+          <select
+            id="label-filter"
+            value={labelFilter}
+            onChange={(event) => setLabelFilter(event.target.value)}
+            className="border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="">All labels</option>
+            {availableLabels.map((label) => (
+              <option key={label} value={label}>
+                {label}
               </option>
             ))}
           </select>
@@ -708,7 +817,30 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
                   </span>
                 </button>
               </th>
-              <th className="py-3 px-4 text-left">Labels</th>
+              <th
+                className="py-3 px-4 text-left"
+                aria-sort={
+                  labelSortDirection === 'asc'
+                    ? 'ascending'
+                    : labelSortDirection === 'desc'
+                      ? 'descending'
+                      : 'none'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={cycleLabelSortDirection}
+                  aria-label="Sort by label"
+                  className="inline-flex items-center gap-1"
+                >
+                  Labels
+                  <span aria-hidden="true">
+                    {labelSortDirection === 'asc' && '↑'}
+                    {labelSortDirection === 'desc' && '↓'}
+                    {labelSortDirection === null && '⇅'}
+                  </span>
+                </button>
+              </th>
               <th className="py-3 px-4 text-left">Total invested</th>
               <th
                 className="py-3 px-4 text-left"
@@ -745,10 +877,22 @@ export function InvestmentsTable({ investments, labels: labelsData }: Investment
 
               const totalInvested = (investment.amount * investment.price).toFixed(2);
 
+              const customLabels = investment.labels ?? [];
+
               return (
                 <tr key={investment.id} className="border-b border-gray-200 hover:bg-gray-100">
                   <td className="py-3 px-4">
-                    <span>{investment.instrument}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span>{investment.instrument}</span>
+                      {customLabels.map((label) => (
+                        <span
+                          key={label}
+                          className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full"
+                        >
+                          {label}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="py-3 px-4">{investment.category}</td>
                   <td className="py-3 px-4">{investment.amount}</td>

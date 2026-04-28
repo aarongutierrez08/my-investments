@@ -11,6 +11,10 @@ const dbRowSchema = z.object({
   category: z.enum(CATEGORIES),
   purchase_date: z.string(),
   notes: z.string().nullable(),
+  labels: z
+    .array(z.string())
+    .nullable()
+    .transform((value) => value ?? []),
   investment_labels: z
     .array(z.object({ label_id: z.string() }))
     .nullable()
@@ -30,6 +34,7 @@ function rowToInvestment(row: DbInvestmentRow): Investment {
     purchaseDate: row.purchase_date,
     category: row.category,
     labelIds: row.investment_labels.map((link) => link.label_id),
+    labels: row.labels,
   };
   if (row.notes !== null) {
     investment.notes = row.notes;
@@ -88,6 +93,7 @@ export async function createInvestment(
     purchase_date: investment.purchaseDate,
     category: investment.category,
     notes: investment.notes ?? null,
+    labels: investment.labels,
   };
 
   const { error: insertError } = await client
@@ -142,6 +148,9 @@ export async function updateInvestment(
   }
   if (patch.category !== undefined) {
     columnUpdate.category = patch.category;
+  }
+  if (patch.labels !== undefined) {
+    columnUpdate.labels = patch.labels;
   }
   if ('notes' in patch) {
     columnUpdate.notes = patch.notes ?? null;

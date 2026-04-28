@@ -62,6 +62,7 @@ describe('Storage Module (labels-only)', () => {
       purchaseDate: new Date().toISOString(),
       category: 'Crypto',
       labelIds: [labelToRemove.id, labelToKeep.id],
+      labels: [],
     };
     await fs.writeFile(
       TEST_DATA_FILE,

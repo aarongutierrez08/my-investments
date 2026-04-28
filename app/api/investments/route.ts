@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     purchaseDate: parsed.data.purchaseDate,
     category: parsed.data.category,
     labelIds: parsed.data.labelIds,
+    labels: parsed.data.labels ?? [],
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
   };
 

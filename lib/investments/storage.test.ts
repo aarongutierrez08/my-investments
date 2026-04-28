@@ -120,6 +120,7 @@ function dbRow(overrides: Partial<Row> = {}): Row {
     category: 'Stocks',
     purchase_date: '2026-01-15',
     notes: null,
+    labels: [],
     ...overrides,
   };
 }
@@ -173,6 +174,18 @@ describe('lib/investments/storage', () => {
       const [investment] = await listInvestments(client);
       expect(investment.notes).toBe('hello');
     });
+
+    it('returns the free-text labels array stored on the row', async () => {
+      db.investments.push(dbRow({ labels: ['long-term', 'tech'] }));
+      const [investment] = await listInvestments(client);
+      expect(investment.labels).toEqual(['long-term', 'tech']);
+    });
+
+    it('treats a null labels column as an empty array', async () => {
+      db.investments.push(dbRow({ labels: null }));
+      const [investment] = await listInvestments(client);
+      expect(investment.labels).toEqual([]);
+    });
   });
 
   describe('getInvestment', () => {
@@ -201,6 +214,7 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: [],
+        labels: [],
       };
 
       const created = await createInvestment(investment, client);
@@ -220,6 +234,7 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: ['lbl-a', 'lbl-b'],
+        labels: [],
       };
 
       await createInvestment(investment, client);
@@ -228,6 +243,24 @@ describe('lib/investments/storage', () => {
         { investment_id: 'inv-1', label_id: 'lbl-a' },
         { investment_id: 'inv-1', label_id: 'lbl-b' },
       ]);
+    });
+
+    it('persists the free-text labels array on the investments row', async () => {
+      const investment: Investment = {
+        id: 'inv-1',
+        instrument: 'AAPL',
+        amount: 10,
+        price: 150,
+        purchaseDate: '2026-01-15',
+        category: 'Stocks',
+        labelIds: [],
+        labels: ['long-term', 'tech'],
+      };
+
+      const created = await createInvestment(investment, client);
+
+      expect(db.investments[0].labels).toEqual(['long-term', 'tech']);
+      expect(created.labels).toEqual(['long-term', 'tech']);
     });
 
     it('persists notes as null when omitted', async () => {
@@ -239,6 +272,7 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: [],
+        labels: [],
       };
 
       await createInvestment(investment, client);
@@ -255,6 +289,7 @@ describe('lib/investments/storage', () => {
         purchaseDate: '2026-01-15',
         category: 'Stocks',
         labelIds: [],
+        labels: [],
       };
 
       const created = await createInvestment(investment, client);

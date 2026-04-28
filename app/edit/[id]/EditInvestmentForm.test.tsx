@@ -27,6 +27,7 @@ const investment: Investment = {
   purchaseDate: '2026-01-15',
   category: 'Stocks',
   labelIds: ['lbl-longterm'],
+  labels: [],
   notes: 'Initial position',
 };
 
@@ -123,6 +124,7 @@ describe('EditInvestmentForm', () => {
       purchaseDate: '2026-01-15',
       category: 'Stocks',
       labelIds: ['lbl-longterm'],
+      labels: [],
       notes: 'Initial position',
     });
 
@@ -149,6 +151,65 @@ describe('EditInvestmentForm', () => {
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.category).toBe('Crypto');
+  });
+
+  describe('custom labels (free-text chips)', () => {
+    function getLabelsInput(): HTMLInputElement {
+      return screen.getByPlaceholderText(/add a label/i) as HTMLInputElement;
+    }
+
+    const investmentWithLabels: Investment = {
+      ...investment,
+      labels: ['crypto', 'long-term'],
+    };
+
+    it('renders the investment current labels as chips and submits without the removed one', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(investmentWithLabels), { status: 200 }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<EditInvestmentForm investment={investmentWithLabels} labels={labels} />);
+
+      expect(screen.getByRole('button', { name: /remove crypto/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /remove long-term/i })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /remove long-term/i }));
+      expect(
+        screen.queryByRole('button', { name: /remove long-term/i }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.labels).toEqual(['crypto']);
+    });
+
+    it('submits a payload that includes a newly-typed label', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(investmentWithLabels), { status: 200 }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      render(<EditInvestmentForm investment={investmentWithLabels} labels={labels} />);
+
+      const input = getLabelsInput();
+      fireEvent.change(input, { target: { value: 'speculative' } });
+      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+      fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.labels).toEqual(['crypto', 'long-term', 'speculative']);
+    });
   });
 
   describe('notes', () => {
