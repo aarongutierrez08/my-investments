@@ -101,6 +101,11 @@ These conventions exist to keep the codebase **professional, scalable, and revie
 - Production code must not export underscore-prefixed test hooks (`_setTestDataFilePath` is a known mistake to avoid). Achieve testability through dependency injection: pass the file path / client / clock as a parameter, default to the production value.
 - A component that's hard to test is a design smell. Refactor before piling on workarounds.
 
+### Mocks vs. real boundaries
+- Unit tests mock the Supabase client. Mocks are useful for logic, but they **do not validate the contract between the DB and the parsing layer** — the mock can return whatever shape the test author thinks is correct, even if PostgREST returns something else.
+- Known trap: PostgREST returns `NUMERIC` columns as JSON `number`, not string. Schemas that assume strings will pass mocked tests but throw at runtime.
+- Any PR that touches: a Zod schema for a DB row, a migration, a `select` shape, env-var loading, or the Supabase client wiring **must be smoke-tested against a running local Supabase** (`npm run db:start` + `npm run dev` + load `/`). Test results from the unit suite alone are not sufficient evidence.
+
 ### Money and arithmetic
 - Money in the database: `NUMERIC(precision, scale)` always. `amount` uses `NUMERIC(20, 8)`, `price` uses `NUMERIC(20, 4)`.
 - Money in TypeScript: prefer `number` for display only. When summing or averaging across many investments, use a strategy that avoids float drift (multiply to integer scale, sum, divide back; or use a decimal library if introduced via `package.json`).
@@ -134,6 +139,7 @@ These instructions override the default agent behavior for this project specific
 6. **Use dependency injection over module-level mutable state.** If something needs to be mocked in tests, the production callsite should accept it as a parameter with a sensible default. Do not add `_setTestX` exports.
 7. **Stay inside the active stage.** Read `STAGES.md`, identify the active stage, and respect its anti-priorities. Do not propose or sneak in features from future stages.
 8. **One issue, one goal.** If your implementation is growing into a refactor or pulling in unrelated changes, stop and split. The reviewer will block multi-goal PRs.
+9. **Smoke-test boundary changes against a real Supabase.** If the diff touches DB row parsing, migrations, `select` shapes, env-var loading, or the Supabase client, do not rely on unit tests alone: start the local DB and load the app once before declaring done. See "Mocks vs. real boundaries".
 
 ### Reviewer
 
@@ -149,6 +155,7 @@ The Reviewer must enforce all of the Code conventions and Agent overrides above.
 8. The PR uses `any` outside an adapter shim, or collapses a meaningful discriminated union into a boolean.
 9. The PR mixes two unrelated goals into one diff. Acceptance criteria from the issue are met but the diff also touches unrelated files.
 10. The PR violates a Business rule from this AGENTS.md (e.g., allows `amount = 0`, allows future-dated `purchase_date`, allows custom categories before Stage 5).
+11. The PR touches a DB↔code boundary (Zod schema for a DB row, migration, `select` shape, env-var loading, Supabase client wiring) and presents only unit-test evidence. The Developer must show evidence of a smoke test against a running local Supabase. See "Mocks vs. real boundaries".
 
 When blocking, the Reviewer must cite the specific Code convention or Agent override violated and reference the file:line.
 
