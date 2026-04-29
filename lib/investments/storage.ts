@@ -6,8 +6,8 @@ import { CATEGORIES, type Investment } from '../types';
 const dbRowSchema = z.object({
   id: z.string(),
   instrument: z.string(),
-  amount: z.string().transform((value) => Number(value)),
-  price: z.string().transform((value) => Number(value)),
+  amount: z.number(),
+  price: z.number(),
   category: z.enum(CATEGORIES),
   purchase_date: z.string(),
   notes: z.string().nullable(),
@@ -40,10 +40,6 @@ function rowToInvestment(row: DbInvestmentRow): Investment {
     investment.notes = row.notes;
   }
   return investment;
-}
-
-function moneyToString(value: number): string {
-  return value.toString();
 }
 
 export async function listInvestments(
@@ -88,8 +84,8 @@ export async function createInvestment(
   const insertRow = {
     id: investment.id,
     instrument: investment.instrument,
-    amount: moneyToString(investment.amount),
-    price: moneyToString(investment.price),
+    amount: investment.amount,
+    price: investment.price,
     purchase_date: investment.purchaseDate,
     category: investment.category,
     notes: investment.notes ?? null,
@@ -138,10 +134,10 @@ export async function updateInvestment(
     columnUpdate.instrument = patch.instrument;
   }
   if (patch.amount !== undefined) {
-    columnUpdate.amount = moneyToString(patch.amount);
+    columnUpdate.amount = patch.amount;
   }
   if (patch.price !== undefined) {
-    columnUpdate.price = moneyToString(patch.price);
+    columnUpdate.price = patch.price;
   }
   if (patch.purchaseDate !== undefined) {
     columnUpdate.purchase_date = patch.purchaseDate;
