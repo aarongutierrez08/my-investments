@@ -115,8 +115,8 @@ function dbRow(overrides: Partial<Row> = {}): Row {
   return {
     id: 'inv-1',
     instrument: 'AAPL',
-    amount: '10',
-    price: '150',
+    amount: 10,
+    price: 150,
     category: 'Stocks',
     purchase_date: '2026-01-15',
     notes: null,
@@ -155,12 +155,20 @@ describe('lib/investments/storage', () => {
       expect(btc?.labelIds).toEqual([]);
     });
 
-    it('parses NUMERIC strings back into numbers without drift on round-trip', async () => {
-      db.investments.push(dbRow({ id: 'inv-1', amount: '0.1', price: '0.2' }));
+    it('parses NUMERIC values returned as JSON numbers (real PostgREST shape)', async () => {
+      db.investments.push(dbRow({ id: 'inv-1', amount: 0.25, price: 30000 }));
 
       const [investment] = await listInvestments(client);
-      expect(investment.amount).toBe(0.1);
-      expect(investment.price).toBe(0.2);
+      expect(investment.amount).toBe(0.25);
+      expect(investment.price).toBe(30000);
+    });
+
+    it('parses integer NUMERIC values, including zero price', async () => {
+      db.investments.push(dbRow({ id: 'inv-1', amount: 10, price: 0 }));
+
+      const [investment] = await listInvestments(client);
+      expect(investment.amount).toBe(10);
+      expect(investment.price).toBe(0);
     });
 
     it('omits notes when the column is null', async () => {
@@ -221,8 +229,8 @@ describe('lib/investments/storage', () => {
 
       expect(created.id).toBe('inv-1');
       expect(db.investments).toHaveLength(1);
-      expect(db.investments[0].amount).toBe('10');
-      expect(db.investments[0].price).toBe('150');
+      expect(db.investments[0].amount).toBe(10);
+      expect(db.investments[0].price).toBe(150);
     });
 
     it('inserts join rows for every labelId', async () => {
@@ -296,13 +304,15 @@ describe('lib/investments/storage', () => {
 
       expect(created.amount).toBe(0.1);
       expect(created.price).toBe(0.2);
+      expect(db.investments[0].amount).toBe(0.1);
+      expect(db.investments[0].price).toBe(0.2);
     });
   });
 
   describe('updateInvestment', () => {
     beforeEach(() => {
       db.investments.push(
-        dbRow({ id: 'inv-1', instrument: 'AAPL', amount: '10', price: '150' }),
+        dbRow({ id: 'inv-1', instrument: 'AAPL', amount: 10, price: 150 }),
       );
       db.investment_labels.push({ investment_id: 'inv-1', label_id: 'lbl-old' });
     });
@@ -316,8 +326,8 @@ describe('lib/investments/storage', () => {
 
       expect(updated?.price).toBe(200);
       expect(updated?.instrument).toBe('AAPL');
-      expect(db.investments[0].price).toBe('200');
-      expect(db.investments[0].amount).toBe('10');
+      expect(db.investments[0].price).toBe(200);
+      expect(db.investments[0].amount).toBe(10);
     });
 
     it('replaces the labelIds set when provided', async () => {
